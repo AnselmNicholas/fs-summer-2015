@@ -34,19 +34,10 @@ void print_std_frame(frame &cur_frame)
 	}
 
 
-#ifdef HHPIN32
-	std::cout << "0x" << std::setw(8) << std::setfill('0') 
-#else
-	std::cout << "0x" 
-#endif
-              << std::hex << cur_std_frame.address() << " call ";
 
-#ifdef HHPIN32
-	std::cout << "0x" << std::setw(8) << std::setfill('0')
-#else
-	std::cout << "0x"
-#endif
-			<< std::hex  << cur_std_frame.address()+cur_std_frame.rawbytes().length()+amt;
+	std::cout << "0x" << std::hex << cur_std_frame.address() << " call ";
+
+	std::cout << "0x" << std::hex  << cur_std_frame.address()+cur_std_frame.rawbytes().length()+amt;
 
 	std::cout << " ctr "<< std::dec << ctr - 1 ;
 	std::cout << std::endl;
