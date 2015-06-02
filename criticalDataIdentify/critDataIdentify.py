@@ -3,7 +3,6 @@ import os
 import logging
 import argparse
 import re
-from duplicity.tempdir import default
 
 '''
 Use gdb to find address of function.
