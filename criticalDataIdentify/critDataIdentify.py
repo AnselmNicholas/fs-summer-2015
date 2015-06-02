@@ -3,6 +3,7 @@ import os
 import logging
 import argparse
 import re
+import shlex
 
 '''
 Use gdb to find address of function.
@@ -235,14 +236,21 @@ def run(functions_file, trace_file, binary_file, use_gdb=False):
     functions = {}
     with open(functions_file, "r") as functF:
         logger.debug("Opened function file")
-        for line in functF:
-            logger.debug("read line: %s", line)
-            if line.strip():  # skip empty line
-                line = line.split()
-                function = line[0]
-                paramcnt = line[1]
-                logger.info("Added %s:%s", function, paramcnt)
-                functions[function] = paramcnt    
+        
+        function_file_content = functF.read()
+        logger.debug("Content is \n%s", function_file_content)
+        
+        lexer = shlex.shlex(function_file_content, posix = True)
+        
+        functionName = lexer.get_token()
+        paramCnt = lexer.get_token()
+        
+        while(functionName is not None and paramCnt is not None):
+            logger.info("Added %s:%s", functionName, paramCnt)
+            functions[functionName] = paramCnt
+            functionName = lexer.get_token()
+            paramCnt = lexer.get_token()
+                
     if (use_gdb):
         dstAddresses = fetchAddressFromGDB(functions.keys(), binary_file)
     else:
