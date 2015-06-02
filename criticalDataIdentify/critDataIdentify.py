@@ -157,7 +157,7 @@ Input:
     dstAddresses = list of destination address
     trace_file = path to trace file
 Output:
-    named dictionary of {destination address, frame no}
+    named dictionary of {destination address:[frame nos]}
 '''
 def getInstructionAddress(dstAddresses, trace_file):
     logger = logging.getLogger(__name__)
@@ -179,7 +179,10 @@ def getInstructionAddress(dstAddresses, trace_file):
             if dstAddr in dstAddresses:
                 logger.info("%s is called at %s with frame no %s", dstAddr, instrAddr, ctr)
                 # ret.append({dstAddr:ctr})
-                ret[dstAddr] = ctr
+                try:
+                    ret[dstAddr].append(ctr)
+                except KeyError:
+                    ret[dstAddr] = [ctr]
 
     return ret;
 
@@ -250,7 +253,7 @@ def run(functions_file, trace_file, binary_file, use_gdb=False):
     addrFrameMap = getInstructionAddress(dstAddresses.keys(), trace_file)
     logger.info("Output for getInstructionAddress: %s", addrFrameMap)
     
-    frameParamCntMap = [[addrFrameMap[address], functions[dstAddresses[address]]] for address in addrFrameMap.keys()]
+    frameParamCntMap = [[frame, functions[dstAddresses[address]]] for address in addrFrameMap.keys() for frame in addrFrameMap[address]]
         
     for frame, paramCnt in frameParamCntMap:
         fetchParam(trace_file, frame, paramCnt)
