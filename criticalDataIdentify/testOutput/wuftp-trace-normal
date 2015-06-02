@@ -1,0 +1,53 @@
+INFO:__main__:Reading input file funct.txt
+INFO:__main__:Added setuid:1
+INFO:__main__:Added seteuid:1
+INFO:__main__:Added setreuid:2
+INFO:__main__:Added execl:2
+INFO:__main__:Added unlink:1
+INFO:__main__:Fetching addresse for 5 function ['setuid', 'execl', 'unlink', 'setreuid', 'seteuid'] from binary [/home/adrian/traces2/wuftp/trace-normal/bin/ftpd] with source []
+INFO:__main__:Executing: [objdump -j.plt -d /home/adrian/traces2/wuftp/trace-normal/bin/ftpd]
+INFO:__main__:Executing: [objdump -t /home/adrian/traces2/wuftp/trace-normal/bin/ftpd | grep "g     F"]
+INFO:__main__:Address of function setuid is 0x804a528
+INFO:__main__:Address of function execl is unknown
+INFO:__main__:Address of function unlink is 0x804a5d8
+INFO:__main__:Address of function setreuid is unknown
+INFO:__main__:Address of function seteuid is 0x804aa18
+INFO:__main__:Output for fetchAddress: {'0x804aa18': 'seteuid', '0x804a528': 'setuid', '0x804a5d8': 'unlink'}
+INFO:__main__:Executing: [bin/fetchCallFromTrace /home/adrian/traces2/wuftp/trace-normal/trace-normal.bpt]
+INFO:__main__:0x804aa18 is called at 0x805576f with frame no 26501
+INFO:__main__:0x804aa18 is called at 0x80559f5 with frame no 749445
+INFO:__main__:0x804aa18 is called at 0x80553ec with frame no 835724
+INFO:__main__:Output for getInstructionAddress: {'0x804aa18': ['26501', '749445', '835724']}
+Function: seteuid, Frame: 26501
+INFO:__main__:Executing: [bin/fetchParam /home/adrian/traces2/wuftp/trace-normal/trace-normal.bpt 26501 1]
+ESP value: bfffe000
+First memory location bfffe000
+Parameter: 1, Offset from ESP: 0
+   [0] bfffe000	bitlen: 8	T[0]	value: 00
+   [1] bfffe001	bitlen: 8	T[0]	value: 00
+   [2] bfffe002	bitlen: 8	T[0]	value: 00
+   [3] bfffe003	bitlen: 8	T[0]	value: 00
+
+
+Function: seteuid, Frame: 749445
+INFO:__main__:Executing: [bin/fetchParam /home/adrian/traces2/wuftp/trace-normal/trace-normal.bpt 749445 1]
+ESP value: bfffe000
+First memory location bfffe000
+Parameter: 1, Offset from ESP: 0
+   [0] bfffe000	bitlen: 8	T[0]	value: e8
+   [1] bfffe001	bitlen: 8	T[0]	value: 03
+   [2] bfffe002	bitlen: 8	T[0]	value: 00
+   [3] bfffe003	bitlen: 8	T[0]	value: 00
+
+
+Function: seteuid, Frame: 835724
+INFO:__main__:Executing: [bin/fetchParam /home/adrian/traces2/wuftp/trace-normal/trace-normal.bpt 835724 1]
+ESP value: bfffe070
+First memory location bfffe070
+Parameter: 1, Offset from ESP: 0
+   [0] bfffe070	bitlen: 8	T[0]	value: 00
+   [1] bfffe071	bitlen: 8	T[0]	value: 00
+   [2] bfffe072	bitlen: 8	T[0]	value: 00
+   [3] bfffe073	bitlen: 8	T[0]	value: 00
+
+

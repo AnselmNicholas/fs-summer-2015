@@ -1,0 +1,17 @@
+INFO:__main__:Reading input file funct.txt
+INFO:__main__:Added setuid:1
+INFO:__main__:Added seteuid:1
+INFO:__main__:Added setreuid:2
+INFO:__main__:Added execl:2
+INFO:__main__:Added unlink:1
+INFO:__main__:Fetching addresse for 5 function ['setuid', 'execl', 'unlink', 'setreuid', 'seteuid'] from binary [/home/adrian/traces2/wuftp/trace-user/bin/ftpd_user] with source []
+INFO:__main__:Executing: [objdump -j.plt -d /home/adrian/traces2/wuftp/trace-user/bin/ftpd_user]
+INFO:__main__:Executing: [objdump -t /home/adrian/traces2/wuftp/trace-user/bin/ftpd_user | grep "g     F"]
+INFO:__main__:Address of function setuid is 0x804a528
+INFO:__main__:Address of function execl is unknown
+INFO:__main__:Address of function unlink is 0x804a5d8
+INFO:__main__:Address of function setreuid is unknown
+INFO:__main__:Address of function seteuid is 0x804aa18
+INFO:__main__:Output for fetchAddress: {'0x804aa18': 'seteuid', '0x804a528': 'setuid', '0x804a5d8': 'unlink'}
+INFO:__main__:Executing: [bin/fetchCallFromTrace /home/adrian/traces2/wuftp/trace-user/trace-user.bpt]
+INFO:__main__:Output for getInstructionAddress: {}

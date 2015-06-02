@@ -1,0 +1,29 @@
+INFO:__main__:Reading input file funct.txt
+INFO:__main__:Added setuid:1
+INFO:__main__:Added seteuid:1
+INFO:__main__:Added setreuid:2
+INFO:__main__:Added execl:2
+INFO:__main__:Added unlink:1
+INFO:__main__:Fetching addresse for 5 function ['setuid', 'execl', 'unlink', 'setreuid', 'seteuid'] from binary [/home/adrian/traces2/sudo/trace-normal/bin/sudo.askp] with source []
+INFO:__main__:Executing: [objdump -j.plt -d /home/adrian/traces2/sudo/trace-normal/bin/sudo.askp]
+INFO:__main__:Executing: [objdump -t /home/adrian/traces2/sudo/trace-normal/bin/sudo.askp | grep "g     F"]
+INFO:__main__:Address of function setuid is 0x8049c40
+INFO:__main__:Address of function execl is 0x8049b70
+INFO:__main__:Address of function unlink is 0x8049820
+INFO:__main__:Address of function setreuid is unknown
+INFO:__main__:Address of function seteuid is 0x80498a0
+INFO:__main__:Output for fetchAddress: {'0x8049c40': 'setuid', '0x8049820': 'unlink', '0x80498a0': 'seteuid', '0x8049b70': 'execl'}
+INFO:__main__:Executing: [bin/fetchCallFromTrace /home/adrian/traces2/sudo/trace-normal/trace-normal-child.bpt]
+INFO:__main__:0x8049c40 is called at 0x8053033 with frame no 1189
+INFO:__main__:Output for getInstructionAddress: {'0x8049c40': ['1189']}
+Function: setuid, Frame: 1189
+INFO:__main__:Executing: [bin/fetchParam /home/adrian/traces2/sudo/trace-normal/trace-normal-child.bpt 1189 1]
+ESP value: bfd228c0
+First memory location bfd228c0
+Parameter: 1, Offset from ESP: 0
+   [0] bfd228c0	bitlen: 8	T[0]	value: 00
+   [1] bfd228c1	bitlen: 8	T[0]	value: 00
+   [2] bfd228c2	bitlen: 8	T[0]	value: 00
+   [3] bfd228c3	bitlen: 8	T[0]	value: 00
+
+
