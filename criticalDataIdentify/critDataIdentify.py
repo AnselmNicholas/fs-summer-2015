@@ -2,6 +2,8 @@ from tempfile import mkstemp
 import os
 import logging
 import argparse
+import re
+from duplicity.tempdir import default
 
 '''
 Use gdb to find address of function.
@@ -81,6 +83,76 @@ def fetchAddressFromGDB(functions, binary, source=""):
     return ret
 
 '''
+Use objdump to find address of function.
+Input:
+    functions = list of function name
+    binary = path to binary file
+    source = path to source file for stripped binary
+Output:
+    named dictionary of {function address:function name}
+'''
+def fetchAddressFromObjdump(functions, binary, source=""):
+    logger = logging.getLogger(__name__)
+    
+    logger.info("Fetching addresse for %i function %s from binary [%s] with source [%s]", len(functions), functions, binary, source)
+    
+    # objdump -t ~/Desktop/bof1/bof1 | grep "g     F"
+    # objdump -j.plt -d ~/Desktop/bof1/bof1
+    ret = {}
+    parseResult = {}
+    
+    cmd = "objdump -j.plt -d " + binary
+    logger.info("Executing: [%s]", cmd)
+    with os.popen(cmd) as result:
+        rst = result.read()        
+        logger.debug("Result:\n%s", rst)
+        
+        rst = rst.splitlines()
+        
+        for result in rst:
+            
+            if not "@plt>" in result:
+                logger.debug("Skipping %s", result)
+                continue
+            
+            addr, funct = result.split()
+            funct, _ = funct.split("@")
+            funct = funct[1:]
+            addr = addr.lstrip("0")
+            logger.debug("Split [%s] [%s]", addr, funct)
+            
+            parseResult[funct] = addr
+    
+    cmd = 'objdump -t ' + binary + ' | grep "g     F"'
+    logger.info("Executing: [%s]", cmd)
+    with os.popen(cmd) as result:
+        rst = result.read()        
+        logger.debug("Result:\n%s", rst)
+        
+        rst = rst.splitlines()
+        for result in rst:
+            addr, _, _, _, _, funct = re.split("\W+", result, 5)
+            addr = addr.lstrip("0")
+            logger.debug("Split [%s] [%s]", addr, funct)
+            
+            parseResult[funct] = addr
+    
+     
+    for idx, function in enumerate(functions):
+        logger.debug("Getting address of [%i] %s", idx, function)
+        
+        if not function in parseResult.keys():
+            # ret.append({None:function})
+            logger.info("Address of function %s is unknown", function)
+        else:
+            address = "0x" + parseResult[function]
+            # ret.append({address:function})
+            ret[address] = function
+            logger.info("Address of function %s is %s", function, address)
+      
+    return ret 
+
+'''
 Fetch frame number for frames which calls inputed destination addresses
 Input:
     dstAddresses = list of destination address
@@ -138,18 +210,22 @@ def test():
     trace_file = "~/Desktop/bof1/5802-readme.bpt"
     binary_file = "~/Desktop/bof1/bof1"
     
-    dstAddresses = fetchAddressFromGDB(functions.keys(), binary_file)
+#     dstAddresses = fetchAddressFromGDB(functions.keys(), binary_file)
+#     logger.info("Output for fetchAddress: %s", dstAddresses)
+    
+    
+    dstAddresses = fetchAddressFromObjdump(functions.keys(), binary_file)
     logger.info("Output for fetchAddress: %s", dstAddresses)
     
     addrFrameMap = getInstructionAddress(dstAddresses.keys(), trace_file)
     logger.info("Output for getInstructionAddress: %s", addrFrameMap)
-    
+     
     frameParamCntMap = [[addrFrameMap[address], functions[dstAddresses[address]]] for address in addrFrameMap.keys()]
-        
+         
     for frame, paramCnt in frameParamCntMap:
         fetchParam(trace_file, frame, paramCnt)
         
-def run(functions_file, trace_file, binary_file):
+def run(functions_file, trace_file, binary_file, use_gdb=False):
     logger = logging.getLogger(__name__)
     
     logger.info("Reading input file %s", functions_file)
@@ -159,14 +235,17 @@ def run(functions_file, trace_file, binary_file):
         logger.debug("Opened function file")
         for line in functF:
             logger.debug("read line: %s", line)
-            if line.strip(): #skip empty line
+            if line.strip():  # skip empty line
                 line = line.split()
                 function = line[0]
                 paramcnt = line[1]
                 logger.info("Added %s:%s", function, paramcnt)
                 functions[function] = paramcnt    
-    
-    dstAddresses = fetchAddressFromGDB(functions.keys(), binary_file)
+    if (use_gdb):
+        dstAddresses = fetchAddressFromGDB(functions.keys(), binary_file)
+    else:
+        dstAddresses = fetchAddressFromObjdump(functions.keys(), binary_file)
+        
     logger.info("Output for fetchAddress: %s", dstAddresses)
     
     addrFrameMap = getInstructionAddress(dstAddresses.keys(), trace_file)
@@ -182,6 +261,7 @@ def main():
     parser.add_argument("functions", help="File containing a list of functions and their argument count. Stored in the format <function name> <paramcnt> \\n")
     parser.add_argument("trace", help="Path to trace file (*.bpt).")
     parser.add_argument("binary", help="Path to binary file.")
+    parser.add_argument('--gdb', dest='use_gdb', action='store_true', help="Use gdb instead of objdump")
     parser.add_argument('-v', '--verbose', action='count', default=0)
     
     args = parser.parse_args()
@@ -195,7 +275,7 @@ def main():
     if args.verbose == 1: logging.basicConfig(level=logging.INFO)
     if args.verbose > 1: logging.basicConfig(level=logging.DEBUG)
     
-    run(args.functions, args.trace, args.binary)
+    run(args.functions, args.trace, args.binary, args.use_gdb)
     
 if __name__ == "__main__":
     main()
