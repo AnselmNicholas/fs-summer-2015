@@ -162,6 +162,8 @@ void print_all(const char *f,uint64_t frameNo, uint32_t paramCnt)
 		const ::std_frame& cur_std_frame = cur_frame->std_frame();
 
 		uint64_t cesp = fetchESPvalue(cur_std_frame.operand_pre_list());
+
+		if (cesp == 0 ) continue;
 		if (esp != cesp) {
 			std::cout<<"Skipped "<<ctr<<" as frame's esp value != esp"<<std::endl;
 

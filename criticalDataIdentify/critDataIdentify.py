@@ -253,10 +253,15 @@ def run(functions_file, trace_file, binary_file, use_gdb=False):
     addrFrameMap = getInstructionAddress(dstAddresses.keys(), trace_file)
     logger.info("Output for getInstructionAddress: %s", addrFrameMap)
     
-    frameParamCntMap = [[frame, functions[dstAddresses[address]]] for address in addrFrameMap.keys() for frame in addrFrameMap[address]]
+    # frameParamCntMap = [[frame, functions[dstAddresses[address]]] for address in addrFrameMap.keys() for frame in addrFrameMap[address]]
         
-    for frame, paramCnt in frameParamCntMap:
-        fetchParam(trace_file, frame, paramCnt)
+    # for frame, paramCnt in frameParamCntMap: 
+    #    fetchParam(trace_file, frame, paramCnt)
+    
+    for address in addrFrameMap.keys():
+        for frame in addrFrameMap[address]:
+            print "Function: {}, Frame: {}".format(dstAddresses[address], frame)
+            fetchParam(trace_file, frame, functions[dstAddresses[address]])
     
 def main():
     parser = argparse.ArgumentParser(description="Identify critical data from trace file")
