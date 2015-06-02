@@ -1,6 +1,7 @@
 from tempfile import mkstemp
 import os
 import logging
+import argparse
 
 '''
 Use gdb to find address of function.
@@ -130,6 +131,7 @@ def fetchParam(trace_file, frame, paramCnt):
 
 
 def test():
+    logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
     
     functions = {"impossible":0, "test":1, "setuid":1, "main":0, "exit":0, "open":2, "read":3, "close":1, "perror":0}
@@ -137,17 +139,63 @@ def test():
     binary_file = "~/Desktop/bof1/bof1"
     
     dstAddresses = fetchAddressFromGDB(functions.keys(), binary_file)
-    logger.info("Output for fetchAddress: %s",dstAddresses)
+    logger.info("Output for fetchAddress: %s", dstAddresses)
     
     addrFrameMap = getInstructionAddress(dstAddresses.keys(), trace_file)
-    logger.info("Output for getInstructionAddress: %s",addrFrameMap)
+    logger.info("Output for getInstructionAddress: %s", addrFrameMap)
     
     frameParamCntMap = [[addrFrameMap[address], functions[dstAddresses[address]]] for address in addrFrameMap.keys()]
         
     for frame, paramCnt in frameParamCntMap:
         fetchParam(trace_file, frame, paramCnt)
         
+def run(functions_file, trace_file, binary_file):
+    logger = logging.getLogger(__name__)
+    
+    logger.info("Reading input file %s", functions_file)
+    
+    functions = {}
+    with open(functions_file, "r") as functF:
+        logger.debug("Opened function file")
+        for line in functF:
+            logger.debug("read line: %s", line)
+            if line.strip(): #skip empty line
+                line = line.split()
+                function = line[0]
+                paramcnt = line[1]
+                logger.info("Added %s:%s", function, paramcnt)
+                functions[function] = paramcnt    
+    
+    dstAddresses = fetchAddressFromGDB(functions.keys(), binary_file)
+    logger.info("Output for fetchAddress: %s", dstAddresses)
+    
+    addrFrameMap = getInstructionAddress(dstAddresses.keys(), trace_file)
+    logger.info("Output for getInstructionAddress: %s", addrFrameMap)
+    
+    frameParamCntMap = [[addrFrameMap[address], functions[dstAddresses[address]]] for address in addrFrameMap.keys()]
+        
+    for frame, paramCnt in frameParamCntMap:
+        fetchParam(trace_file, frame, paramCnt)
+    
+def main():
+    parser = argparse.ArgumentParser(description="Identify critical data from trace file")
+    parser.add_argument("functions", help="File containing a list of functions and their argument count. Stored in the format <function name> <paramcnt> \\n")
+    parser.add_argument("trace", help="Path to trace file (*.bpt).")
+    parser.add_argument("binary", help="Path to binary file.")
+    parser.add_argument('-v', '--verbose', action='count', default=0)
+    
+    args = parser.parse_args()
+    if not os.path.exists(args.functions):
+        parser.error("functions file do not exist");
+    if not os.path.exists(args.trace):
+        parser.error("trace file do not exist");
+    if not os.path.exists(args.binary):
+        parser.error("binary file do not exist");
 
+    if args.verbose == 1: logging.basicConfig(level=logging.INFO)
+    if args.verbose > 1: logging.basicConfig(level=logging.DEBUG)
+    
+    run(args.functions, args.trace, args.binary)
+    
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    test()
+    main()
