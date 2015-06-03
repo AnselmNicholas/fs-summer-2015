@@ -45,4 +45,13 @@ Unable to find `execl` in all trace.
  - Found critical data for `seteuid` in 1 frame.
 - wuftp-trace-user
 
-Updated on 03 June 2015, 05:32 PM.
+##sshd
+- sshd-hash
+- sshd-mod
+- sshd-password_fail
+- sshd-uid
+- sshd-user
+- sshd-userid
+
+
+Updated on 03 June 2015, 05:39 PM.
