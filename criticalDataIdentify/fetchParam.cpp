@@ -152,6 +152,7 @@ void print_all(const char *f,uint64_t frameNo, uint32_t paramCnt)
 	memset(paramChecker,0,paramCnt);
 
 	uint32_t numParamRemain = paramCnt;
+	uint32_t maxEspOffset = paramCnt*4;
 	while (numParamRemain > 0 && ctr > 0 ){
 		ctr--;
 
@@ -164,10 +165,10 @@ void print_all(const char *f,uint64_t frameNo, uint32_t paramCnt)
 		uint64_t cesp = fetchESPvalue(cur_std_frame.operand_pre_list());
 
 		if (cesp == 0 ) continue;
-		if (esp != cesp) {
-			std::cout<<"Skipped "<<ctr<<" as frame's esp value != esp"<<std::endl;
-
-			continue;
+		if (cesp - esp > maxEspOffset) {
+			std::cout<<"Stopping as "<<ctr<<" as frame's esp offset from call is greater than 4*paramCnt"<<std::endl;
+			break; //Stop earlier and not at frame 1 if incorrect paramCnt is inputted.
+			//continue; //Switch back to continue if it causes error.
 		}
 
 		uint64_t memLoc = fetchFirstWrittenMemoryLocation(cur_std_frame.operand_pre_list());
