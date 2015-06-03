@@ -1,0 +1,60 @@
+INFO:__main__:Reading input file funct.txt
+INFO:__main__:Added execl:2
+INFO:__main__:Added execlp:2
+INFO:__main__:Added execle:3
+INFO:__main__:Added execv:2
+INFO:__main__:Added execvp:2
+INFO:__main__:Added execvpe:3
+INFO:__main__:Added setuid:1
+INFO:__main__:Added seteuid:1
+INFO:__main__:Added setreuid:2
+INFO:__main__:Added setresuid:3
+INFO:__main__:Added setgid:1
+INFO:__main__:Added setegid:1
+INFO:__main__:Added setregid:2
+INFO:__main__:Added setresgid:3
+INFO:__main__:Added unlink:1
+INFO:__main__:Added unlike:1
+INFO:__main__:Added remove:1
+INFO:__main__:Fetching addresse for 17 function ['execl', 'setuid', 'setreuid', 'execvpe', 'unlike', 'execvp', 'execle', 'remove', 'setegid', 'setgid', 'setresuid', 'seteuid', 'execlp', 'execv', 'unlink', 'setresgid', 'setregid'] from binary [/home/adrian/traces2/ghttpd/trace-cgi/bin/ghttpd_cgi] with source []
+INFO:__main__:Executing: [objdump -j.plt -d /home/adrian/traces2/ghttpd/trace-cgi/bin/ghttpd_cgi]
+INFO:__main__:Executing: [objdump -t /home/adrian/traces2/ghttpd/trace-cgi/bin/ghttpd_cgi | grep "g     F"]
+INFO:__main__:Address of function execl is 0x8048d70
+INFO:__main__:Address of function setuid is 0x8048dd0
+INFO:__main__:Address of function setreuid is unknown
+INFO:__main__:Address of function execvpe is unknown
+INFO:__main__:Address of function unlike is unknown
+INFO:__main__:Address of function execvp is unknown
+INFO:__main__:Address of function execle is unknown
+INFO:__main__:Address of function remove is unknown
+INFO:__main__:Address of function setegid is unknown
+INFO:__main__:Address of function setgid is 0x8048c60
+INFO:__main__:Address of function setresuid is unknown
+INFO:__main__:Address of function seteuid is unknown
+INFO:__main__:Address of function execlp is unknown
+INFO:__main__:Address of function execv is unknown
+INFO:__main__:Address of function unlink is unknown
+INFO:__main__:Address of function setresgid is unknown
+INFO:__main__:Address of function setregid is unknown
+INFO:__main__:Output for fetchAddress: {'0x8048c60': 'setgid', '0x8048d70': 'execl', '0x8048dd0': 'setuid'}
+INFO:__main__:Executing: [bin/fetchCallFromTrace /home/adrian/traces2/ghttpd/trace-cgi/trace-cgi2.bpt]
+INFO:__main__:0x8048d70 is called at 0x8049b62 with frame no 41356
+INFO:__main__:Output for getInstructionAddress: {'0x8048d70': ['41356']}
+Function: execl, Frame: 41356
+INFO:__main__:Executing: [bin/fetchParam /home/adrian/traces2/ghttpd/trace-cgi/trace-cgi2.bpt 41356 2]
+ESP value: ff801820
+First memory location ff801820
+Parameter: 1, Offset from ESP: 0
+   [0] ff801820	bitlen: 8	T[0]	value: 4b
+   [1] ff801821	bitlen: 8	T[0]	value: 18
+   [2] ff801822	bitlen: 8	T[0]	value: 80
+   [3] ff801823	bitlen: 8	T[0]	value: ff
+
+First memory location ff801824
+Parameter: 2, Offset from ESP: 4
+   [0] ff801824	bitlen: 8	T[0]	value: 00
+   [1] ff801825	bitlen: 8	T[0]	value: 00
+   [2] ff801826	bitlen: 8	T[0]	value: 00
+   [3] ff801827	bitlen: 8	T[0]	value: 00
+
+
