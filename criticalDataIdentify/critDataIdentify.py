@@ -193,6 +193,8 @@ Input:
     trace_file = path to trace file
     frame = frame no of function call
     paramCnt = number of parameter for input function
+Ouput:
+    list of frameno, first memory address pair -> [[123,ff123],[456,ff456]]
 '''
 def fetchParam(trace_file, frame, paramCnt):
     logger = logging.getLogger(__name__)
