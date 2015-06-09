@@ -202,8 +202,21 @@ def fetchParam(trace_file, frame, paramCnt):
     with os.popen(cmd) as result:
         rst = result.read()
         
-    print rst
-
+    logger.debug("Result:\n%s", rst)
+    
+    rst = rst.splitlines()
+    ret = []
+    for result in rst:
+        
+        if not result.startswith("First memory location"):
+            logger.debug("Skipping %s", result)
+            continue
+        
+        result = result.split()
+        
+        ret.append([result[6],result[3]])
+            
+    return ret
 
 def test():
     logging.basicConfig(level=logging.INFO)
@@ -226,7 +239,8 @@ def test():
     frameParamCntMap = [[addrFrameMap[address], functions[dstAddresses[address]]] for address in addrFrameMap.keys()]
          
     for frame, paramCnt in frameParamCntMap:
-        fetchParam(trace_file, frame, paramCnt)
+        firstMemoryFrameNo = fetchParam(trace_file, frame, paramCnt)
+        logger.info("Output for fetchParam: %s", firstMemoryFrameNo)
         
 def run(functions_file, trace_file, binary_file, use_gdb=False):
     logger = logging.getLogger(__name__)
@@ -268,8 +282,9 @@ def run(functions_file, trace_file, binary_file, use_gdb=False):
     
     for address in addrFrameMap.keys():
         for frame in addrFrameMap[address]:
-            print "Function: {}, Frame: {}".format(dstAddresses[address], frame)
-            fetchParam(trace_file, frame, functions[dstAddresses[address]])
+            logger.info("Function: {}, Frame: {}".format(dstAddresses[address], frame))
+            firstMemoryFrameNo = fetchParam(trace_file, frame, functions[dstAddresses[address]])
+            logger.info("Output for fetchParam: %s", firstMemoryFrameNo)
     
 def main():
     parser = argparse.ArgumentParser(description="Identify critical data from trace file")

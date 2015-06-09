@@ -1,0 +1,28 @@
+#
+# Sample function declaration file for critical data detection.
+# Enter function name followed by number of parameters.
+#
+
+execl 2
+execlp 2
+execle 3
+execv 2
+execvp 2
+execvpe 3
+
+setuid 1
+seteuid 1
+setreuid 2
+setresuid 3
+
+setgid 1
+setegid 1
+setregid 2
+setresgid 3
+
+unlink 1
+unlike 1 #TYPO?
+remove 1
+
+#printf 1
+#send 4

@@ -184,7 +184,7 @@ void print_all(const char *f,uint64_t frameNo, uint32_t paramCnt)
 		numParamRemain--;
 
 
-		std::cout<< "First memory location " <<std::hex<<memLoc<<std::dec<<std::endl;
+		std::cout<< "First memory location " <<std::hex<<memLoc<<std::dec<< " Frame No " << ctr <<std::endl;
 		std::cout<< "Parameter: " << paramIdx+1 << ", Offset from ESP: " << diff << std::endl;
 		//print_std_frame(*cur_frame);
 		print_memory_values(*cur_frame);
