@@ -216,7 +216,7 @@ def fetchParam(trace_file, frame, paramCnt):
         
         result = result.split()
         
-        ret.append([result[6],result[3]])
+        ret.append([result[6], result[3]])
             
     return ret
 
@@ -243,7 +243,19 @@ def test():
     for frame, paramCnt in frameParamCntMap:
         firstMemoryFrameNo = fetchParam(trace_file, frame, paramCnt)
         logger.info("Output for fetchParam: %s", firstMemoryFrameNo)
-        
+'''
+Output:
+     Dict of Dict of list keyed to function name followed by function call frame followed by a list of frameno, first memory address pair for critical data
+    
+     Example 
+     {
+    'open': {
+         '91227': [['91226','ffb821e4'],['91225','ffb821e8']]
+         '91240': [['91239','ffb821e4'],['91228','ffb821e8']]
+         }    
+     }
+     
+'''        
 def run(functions_file, trace_file, binary_file, use_gdb=False):
     logger = logging.getLogger(__name__)
     
@@ -256,7 +268,7 @@ def run(functions_file, trace_file, binary_file, use_gdb=False):
         function_file_content = functF.read()
         logger.debug("Content is \n%s", function_file_content)
         
-        lexer = shlex.shlex(function_file_content, posix = True)
+        lexer = shlex.shlex(function_file_content, posix=True)
         
         functionName = lexer.get_token()
         paramCnt = lexer.get_token()
@@ -282,11 +294,16 @@ def run(functions_file, trace_file, binary_file, use_gdb=False):
     # for frame, paramCnt in frameParamCntMap: 
     #    fetchParam(trace_file, frame, paramCnt)
     
+    ret = {}
     for address in addrFrameMap.keys():
         for frame in addrFrameMap[address]:
             logger.info("Function: {}, Frame: {}".format(dstAddresses[address], frame))
             firstMemoryFrameNo = fetchParam(trace_file, frame, functions[dstAddresses[address]])
+            ret.setdefault(dstAddresses[address], {})[frame] = firstMemoryFrameNo
             logger.info("Output for fetchParam: %s", firstMemoryFrameNo)
+            
+    logger.info("returning: {}".format(ret))
+    return ret
     
 def main():
     parser = argparse.ArgumentParser(description="Identify critical data from trace file")
