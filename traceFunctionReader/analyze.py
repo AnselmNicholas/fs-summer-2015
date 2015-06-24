@@ -1,6 +1,36 @@
 import re
 
 
+class Lookahead:
+    """Lookahead iterator for efficient parsing
+
+    http://stackoverflow.com/a/1517965/1364256
+    """
+    def __init__(self, itera):
+        self.iter = iter(itera)
+        self.buffer = []
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        if self.buffer:
+            return self.buffer.pop(0)
+        else:
+            return self.iter.next()
+
+    def lookahead(self, n=1):
+        """Return an item n entries ahead in the iteration."""
+        while n >= len(self.buffer):
+            try:
+                self.buffer.append(self.iter.next())
+            except StopIteration:
+                return None
+        return self.buffer[n]
+
+
+import sys
+sys.setrecursionlimit(10000000)
 inpt = []
 
 
@@ -11,7 +41,7 @@ testInput = [("scwuftpd-skiplib.aiesp", "proc-map-wu-ftpd.txt"),
              ("3577-bof2-noskip.aiesp", "bof2-maps"),
              ("3564-bof2-skip.aiesp", "bof2-maps")
              ]
-testChoice = 1
+testChoice = 0
 
 
 
@@ -26,11 +56,12 @@ for line in open(inputFile):
 
 stack = []
 call = ret = 0
-cur = []
+cur = []  # Current function
 
 call_cnt = {}
 
-for idx, line in enumerate(inpt [91219:91912]):  # [91219:91912]
+inpt = Lookahead(inpt)
+for idx, line in enumerate(inpt):  # [91219:91912]
     line_input = re.split("\W+", line, 2)
     address = line_input[0]
     operand = line_input[1]
@@ -40,19 +71,18 @@ for idx, line in enumerate(inpt [91219:91912]):  # [91219:91912]
 
     try:
         if operand == "calll":
-
-
-
             target, espValue = remainder.split()
             # print "call {}".format(espValue)
             cur.append(line)
             stack.append([espValue, cur])
             cur = []
 
+            if not target.startswith("0x") or target[-1] == (")"):  # handle indirect call
+                target = inpt.lookahead().split()[0]
 
-            # print target
-            if target.startswith("0x"):  # TODO: handle indirect call
-                call_cnt[target] = call_cnt.get(target, 0) + 1
+            call_cnt[target] = call_cnt.get(target, 0) + 1
+
+
 
             # print "{:<10} {} {} {}".format(address, header, operand, espValue)
             # display.write("<li>{:<10} {} {} {}<ul>".format(address, header, operand, espValue))
@@ -127,7 +157,7 @@ def butlast(xs):
         prev = x
 
 
-def processList(xs, header="", debug=True):
+def processList(xs, header="", debug=False):
     global call
     global ret
     for x in butlast(xs):
@@ -288,6 +318,6 @@ def getFunctionNameCmd(targetAddress, procFile, debug=False):
 
 
 
-for ele in sortCallCnt[:5]:
+for ele in sortCallCnt[:]:
     getFunctionNameCmd(ele[0], testInput[testChoice][1])
 
