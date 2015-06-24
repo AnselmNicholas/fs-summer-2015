@@ -307,9 +307,9 @@ for key in call_cnt.keys():
 
 sortCallCnt.sort(key=lambda x : x[1], reverse=True)
 
-for ele in sortCallCnt[:50]:
+for ele in sortCallCnt[:]:
     # print ele
-    print "{} is called {} times. Average instr count is {}. Median is {}.".format(ele[0], ele[1][0], np.mean(ele[1][1]), np.median(ele[1][1]))
+    print "{} is called {} times. Average instr count is {}. Median is {}. Total instr exec by funct is {}".format(ele[0], ele[1][0], np.mean(ele[1][1]), np.median(ele[1][1]), sum(ele[1][1]))
 
 
 def getFunctionNameCmd(targetAddress, procFile, debug=False):
@@ -342,6 +342,8 @@ def getFunctionNameCmd(targetAddress, procFile, debug=False):
     print "Not Found {}".format(targetAddress)
 
 
+
+print "\n\nRun this on the server to get the list of function names.\n\n"
 
 
 for ele in sortCallCnt[:]:
