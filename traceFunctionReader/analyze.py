@@ -42,7 +42,7 @@ testInput = [("scwuftpd-skiplib.aiesp", "proc-map-wu-ftpd.txt"),
              ("3564-bof2-skip.aiesp", "bof2-maps"),
              ("5802-readme.aiesp", "")  # [91219:91912]
              ]
-testChoice = 1
+testChoice = 0
 testInput = testInput[testChoice]
 
 
@@ -113,9 +113,9 @@ with open(inputFile) as f:
 
                 remainder = remainder.split()
                 if len(remainder) == 1:
-                    espValue = hex(int(remainder[0], 16) + 4)[2:-1]
+                    espValue = '%x' % (int(remainder[0], 16) + 4)  # hex(int(remainder[0], 16) + 4)[2:-1]
                 else:
-                    espValue = hex(int(remainder[0][2:], 16) + int(remainder[1], 16) + 4)[2:-1]
+                    espValue = '%x' % (int(remainder[0][2:], 16) + int(remainder[1], 16) + 4)  # hex(int(remainder[0][2:], 16) + int(remainder[1], 16) + 4)[2:-1]
 
                 if functionStack[-1][0] == espValue:
 
@@ -157,9 +157,6 @@ with open(inputFile) as f:
         except IndexError, e:
             print idx, e, line
             # break
-        except Exception, e:
-            print call_cnt
-            print e
 
 
     while len(functionStack):
@@ -211,10 +208,10 @@ def processList(xs, header="", debug=False):
 
                 remainder = remainder.split()
                 if len(remainder) == 1:
-                    espValue = hex(int(remainder[0], 16) + 4)[2:-1]
+                    espValue = '%x' % (int(remainder[0], 16) + 4)  # hex(int(remainder[0], 16) + 4)[2:-1]
 
                 else:
-                    espValue = hex(int(remainder[0][2:], 16) + int(remainder[1], 16) + 4)[2:-1]
+                    espValue = '%x' % (int(remainder[0][2:], 16) + int(remainder[1], 16) + 4)  # hex(int(remainder[0][2:], 16) + int(remainder[1], 16) + 4)[2:-1]
 
 
 
@@ -261,10 +258,10 @@ def processList(xs, header="", debug=False):
 
             remainder = remainder.split()
             if len(remainder) == 1:
-                espValue = hex(int(remainder[0], 16) + 4)[2:-1]
+                espValue = '%x' % (int(remainder[0], 16) + 4)  # hex(int(remainder[0], 16) + 4)[2:-1]
 
             else:
-                espValue = hex(int(remainder[0][2:], 16) + int(remainder[1], 16) + 4)[2:-1]
+                espValue = '%x' % (int(remainder[0][2:], 16) + int(remainder[1], 16) + 4)  # hex(int(remainder[0][2:], 16) + int(remainder[1], 16) + 4)[2:-1]
 
 
             if debug: print "{:<10} {} {} {}".format(address, header, operand, espValue)
@@ -311,8 +308,8 @@ for key in call_cnt.keys():
 sortCallCnt.sort(key=lambda x : x[1], reverse=True)
 
 for ele in sortCallCnt[:50]:
-    #print ele
-    print "{} is called {} times. Average instr count is {}. Median is {}. {}".format(ele[0], ele[1][0], np.mean(ele[1][1]), np.median(ele[1][1]), ele[1][1])
+    # print ele
+    print "{} is called {} times. Average instr count is {}. Median is {}.".format(ele[0], ele[1][0], np.mean(ele[1][1]), np.median(ele[1][1]))
 
 
 def getFunctionNameCmd(targetAddress, procFile, debug=False):
@@ -337,7 +334,7 @@ def getFunctionNameCmd(targetAddress, procFile, debug=False):
 
         if src <= targetAddress and targetAddress <= dst:
             if debug: print line
-            offset = hex(targetAddress - src)[2:-1]
+            offset = '%x' % (targetAddress - src)  # hex(targetAddress - src)[2:-1]
             location = line.split()[-1]
 
             print "objdump -d {} | grep {}".format(location, offset)
