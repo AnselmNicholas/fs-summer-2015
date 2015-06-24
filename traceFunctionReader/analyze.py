@@ -37,20 +37,15 @@ inpt = []
 
 
 testInput = [("scwuftpd-skiplib.aiesp", "proc-map-wu-ftpd.txt"),
-             ("5802-readme.aiesp", "bof1-maps"),
+             ("3150-out-noskip.aiesp", "bof1-maps", 90898, 91589),
              ("3577-bof2-noskip.aiesp", "bof2-maps"),
              ("3564-bof2-skip.aiesp", "bof2-maps")
              ]
 testChoice = 0
+testInput = testInput[testChoice]
 
 
 
-
-
-inputFile = testInput[testChoice][0]
-
-for line in open(inputFile):
-    inpt.append(line.strip())
 
 # # Init List
 
@@ -60,86 +55,106 @@ cur = []  # Current function
 
 call_cnt = {}
 
-inpt = Lookahead(inpt)
-for idx, line in enumerate(inpt):  # [91219:91912]
-    line_input = re.split("\W+", line, 2)
-    address = line_input[0]
-    operand = line_input[1]
-    remainder = line_input[2] if len(line_input) > 2 else None
+inputFile = testInput[0]
+
+# 0x804856b, 0x8048588
+
+lmin = lmax = -1
+
+if len(testInput) > 2:
+    lmin = testInput[2] - 1
+    if len(testInput) > 3:
+        lmax = testInput[3] - 1
+
+with open(inputFile) as f:
+    inpt = Lookahead(f)
+
+    for idx, line in enumerate(inpt):
+
+        if lmin > 0:
+            if idx < lmin: continue
+        if lmax > 0:
+            if idx > lmax: break
+
+        # [91219:91912]
+        line_input = re.split("\W+", line.strip(), 2)
+        address = line_input[0]
+        operand = line_input[1]
+        remainder = line_input[2] if len(line_input) > 2 else None
 
 
 
-    try:
-        if operand == "calll":
-            target, espValue = remainder.split()
-            # print "call {}".format(espValue)
-            cur.append(line)
-            stack.append([espValue, cur])
-            cur = []
-
-            if not target.startswith("0x") or target[-1] == (")"):  # handle indirect call
-                target = inpt.lookahead().split()[0]
-
-            call_cnt[target] = call_cnt.get(target, 0) + 1
-
-
-
-            # print "{:<10} {} {} {}".format(address, header, operand, espValue)
-            # display.write("<li>{:<10} {} {} {}<ul>".format(address, header, operand, espValue))
-            # header += ":"
-
-            call += 1
-        elif operand == "retl":
-
-            remainder = remainder.split()
-            if len(remainder) == 1:
-                espValue = hex(int(remainder[0], 16) + 4)[2:-1]
-
-            else:
-                espValue = hex(int(remainder[0][2:], 16) + int(remainder[1], 16) + 4)[2:-1]
-
-
-
-
-            if stack[-1][0] == espValue:
-
+        try:
+            if operand == "calll":
+                target, espValue = remainder.split()
+                # print "call {}".format(espValue)
                 cur.append(line)
-                t = stack.pop()[1]
-                t.append(cur)
-                cur = t
+                stack.append([espValue, cur])
+                cur = []
+
+                if not target.startswith("0x") or target[-1] == (")"):  # handle indirect call
+                    target = inpt.lookahead().split()[0]
+
+                call_cnt[target] = call_cnt.get(target, 0) + 1
+
+
 
                 # print "{:<10} {} {} {}".format(address, header, operand, espValue)
-                # display.write("<li class='lastChild'>{:<10} {} {} {}</li></ul></li>".format(address, header, operand, espValue))
-                # header = header[:-1]
+                # display.write("<li>{:<10} {} {} {}<ul>".format(address, header, operand, espValue))
+                # header += ":"
+
+                call += 1
+            elif operand == "retl":
+
+                remainder = remainder.split()
+                if len(remainder) == 1:
+                    espValue = hex(int(remainder[0], 16) + 4)[2:-1]
+
+                else:
+                    espValue = hex(int(remainder[0][2:], 16) + int(remainder[1], 16) + 4)[2:-1]
 
 
+
+
+                if stack[-1][0] == espValue:
+
+                    cur.append(line)
+                    t = stack.pop()[1]
+                    t.append(cur)
+                    cur = t
+
+                    # print "{:<10} {} {} {}".format(address, header, operand, espValue)
+                    # display.write("<li class='lastChild'>{:<10} {} {} {}</li></ul></li>".format(address, header, operand, espValue))
+                    # header = header[:-1]
+
+
+                else:
+                    cur.append(line)
+                    # print "{:<10} {} {} {} \t\t\t\t Err".format(address, header, operand, espValue)
+                    # display.write("<li>{:<10} {} {} {} \t\t\t\t Err</li>".format(address, header, operand, espValue))
+
+
+
+                # print "ret {}".format(espValue)
+
+                ret += 1
+                # stack.pop()
             else:
+
                 cur.append(line)
-                # print "{:<10} {} {} {} \t\t\t\t Err".format(address, header, operand, espValue)
-                # display.write("<li>{:<10} {} {} {} \t\t\t\t Err</li>".format(address, header, operand, espValue))
+                # print "{:<10} {} {} {}".format(address, header, operand, remainder)
+
+                # display.write("<li>{:<10} {} {} {}</li>".format(address, header, operand, remainder))
+                pass
+        except Exception, e:
+            print idx, e, line
+            # break
 
 
-
-            # print "ret {}".format(espValue)
-
-            ret += 1
-            # stack.pop()
-        else:
-
-            cur.append(line)
-            # print "{:<10} {} {} {}".format(address, header, operand, remainder)
-
-            # display.write("<li>{:<10} {} {} {}</li>".format(address, header, operand, remainder))
-            pass
-    except Exception, e:
-        print idx, e, line
-        # break
-
-
-while len(stack):
-    t = stack.pop()[1]
-    t.append(cur)
-    cur = t
+    while len(stack):
+        t = stack.pop()[1]
+        t.append(cur)
+        cur = t
 
 
 
@@ -319,5 +334,5 @@ def getFunctionNameCmd(targetAddress, procFile, debug=False):
 
 
 for ele in sortCallCnt[:]:
-    getFunctionNameCmd(ele[0], testInput[testChoice][1])
+    getFunctionNameCmd(ele[0], testInput[1])
 
