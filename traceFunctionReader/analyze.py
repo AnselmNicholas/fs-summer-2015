@@ -19,7 +19,7 @@ class Lookahead:
         else:
             return self.iter.next()
 
-    def lookahead(self, n=1):
+    def lookahead(self, n=0):
         """Return an item n entries ahead in the iteration."""
         while n >= len(self.buffer):
             try:
@@ -37,11 +37,12 @@ inpt = []
 
 
 testInput = [("scwuftpd-skiplib.aiesp", "proc-map-wu-ftpd.txt"),
-             ("3150-out-noskip.aiesp", "bof1-maps", 90898, 91589),
+             ("3150-out-noskip.aiesp", "bof1-maps", 90897, 91589),  # 0x804856b, 0x8048588
              ("3577-bof2-noskip.aiesp", "bof2-maps"),
-             ("3564-bof2-skip.aiesp", "bof2-maps")
+             ("3564-bof2-skip.aiesp", "bof2-maps"),
+             ("5802-readme.aiesp", "")  # [91219:91912]
              ]
-testChoice = 0
+testChoice = 1
 testInput = testInput[testChoice]
 
 
@@ -49,15 +50,16 @@ testInput = testInput[testChoice]
 
 # # Init List
 
-stack = []
-call = ret = 0
-cur = []  # Current function
+functionStack = []
+totalCallCnt = totalRetCnt = 0
+currentFunctionList = []  # Current function
+currentInstrCount = 0
 
 call_cnt = {}
 
 inputFile = testInput[0]
 
-# 0x804856b, 0x8048588
+
 
 lmin = lmax = -1
 
@@ -76,93 +78,104 @@ with open(inputFile) as f:
         if lmax > 0:
             if idx > lmax: break
 
-        # [91219:91912]
+
         line_input = re.split("\W+", line.strip(), 2)
         address = line_input[0]
         operand = line_input[1]
         remainder = line_input[2] if len(line_input) > 2 else None
 
-
-
         try:
             if operand == "calll":
                 target, espValue = remainder.split()
-                # print "call {}".format(espValue)
-                cur.append(line)
-                stack.append([espValue, cur])
-                cur = []
 
-                if not target.startswith("0x") or target[-1] == (")"):  # handle indirect call
+                if not target.startswith("0x") or target[-1] == (")"):  # handle indirect totalCallCnt
                     target = inpt.lookahead().split()[0]
+                
+                # print "totalCallCnt {}".format(espValue)
+                currentFunctionList.append(line)
+                currentInstrCount += 1
+                functionStack.append([espValue, currentFunctionList, currentInstrCount, target])
+                currentFunctionList = []
+                currentInstrCount = 0
 
-                call_cnt[target] = call_cnt.get(target, 0) + 1
 
 
+                cc = call_cnt.get(target, [0, []])
+                cc[0] += 1
+                call_cnt[target] = cc
 
                 # print "{:<10} {} {} {}".format(address, header, operand, espValue)
                 # display.write("<li>{:<10} {} {} {}<ul>".format(address, header, operand, espValue))
                 # header += ":"
 
-                call += 1
+                totalCallCnt += 1
             elif operand == "retl":
 
                 remainder = remainder.split()
                 if len(remainder) == 1:
                     espValue = hex(int(remainder[0], 16) + 4)[2:-1]
-
                 else:
                     espValue = hex(int(remainder[0][2:], 16) + int(remainder[1], 16) + 4)[2:-1]
 
+                if functionStack[-1][0] == espValue:
 
+                    currentFunctionList.append(line)
+                    currentInstrCount += 1
+                    rst = functionStack.pop()
+                    t = rst[1]
+                    t.append(currentFunctionList)
+                    currentFunctionList = t
+                    currentInstrCount += rst[2]
 
-
-                if stack[-1][0] == espValue:
-
-                    cur.append(line)
-                    t = stack.pop()[1]
-                    t.append(cur)
-                    cur = t
+                    call_cnt[rst[3]][1].append(currentInstrCount)
 
                     # print "{:<10} {} {} {}".format(address, header, operand, espValue)
                     # display.write("<li class='lastChild'>{:<10} {} {} {}</li></ul></li>".format(address, header, operand, espValue))
                     # header = header[:-1]
 
-
                 else:
-                    cur.append(line)
+                    currentFunctionList.append(line)
+                    currentInstrCount += 1
                     # print "{:<10} {} {} {} \t\t\t\t Err".format(address, header, operand, espValue)
                     # display.write("<li>{:<10} {} {} {} \t\t\t\t Err</li>".format(address, header, operand, espValue))
 
 
 
-                # print "ret {}".format(espValue)
+                # print "totalRetCnt {}".format(espValue)
 
-                ret += 1
-                # stack.pop()
+                totalRetCnt += 1
+                # functionStack.pop()
             else:
 
-                cur.append(line)
+                currentFunctionList.append(line)
+                currentInstrCount += 1
                 # print "{:<10} {} {} {}".format(address, header, operand, remainder)
 
                 # display.write("<li>{:<10} {} {} {}</li>".format(address, header, operand, remainder))
                 pass
-        except Exception, e:
+
+        except IndexError, e:
             print idx, e, line
             # break
+        except Exception, e:
+            print call_cnt
+            print e
 
 
-    while len(stack):
-        t = stack.pop()[1]
-        t.append(cur)
-        cur = t
+    while len(functionStack):
 
 
+        rst = functionStack.pop()
+        t = rst[1]
+        t.append(currentFunctionList)
+        currentFunctionList = t
+        currentInstrCount += rst[2]
 
-
+        call_cnt[rst[3]][1].append(currentInstrCount)
 
 
 # Processing
-call = ret = 0
+totalCallCnt = totalRetCnt = 0
 
 def butlast(xs):
     xs = iter(xs)
@@ -173,8 +186,8 @@ def butlast(xs):
 
 
 def processList(xs, header="", debug=False):
-    global call
-    global ret
+    global totalCallCnt
+    global totalRetCnt
     for x in butlast(xs):
         if type(x) == list:
             processList(x, header + ":")
@@ -187,13 +200,13 @@ def processList(xs, header="", debug=False):
             if operand == "calll":
 
                 espValue = remainder.split()[-1]
-                # print "call {}".format(espValue)
+                # print "totalCallCnt {}".format(espValue)
 
                 if debug: print "{:<10} {} {} {}".format(address, header, operand, espValue)
                 display.write("<li>{:<10} {} {} {}<ul>".format(address, header, operand, espValue))
                 # header += ":"
 
-                call += 1
+                totalCallCnt += 1
             elif operand == "retl":
 
                 remainder = remainder.split()
@@ -212,9 +225,9 @@ def processList(xs, header="", debug=False):
 
 
 
-                # print "ret {}".format(espValue)
+                # print "totalRetCnt {}".format(espValue)
 
-                ret += 1
+                totalRetCnt += 1
 
             else:
 
@@ -236,12 +249,12 @@ def processList(xs, header="", debug=False):
         if operand == "calll":
 
 #             espValue = remainder.split()[-1]
-#             # print "call {}".format(espValue)
+#             # print "totalCallCnt {}".format(espValue)
 #
 #             print "{:<10} {} {} {}".format(address, header, operand, espValue)
 #             display.write("<li>{:<10} {} {} {}<ul>".format(address, header, operand, espValue))
 #
-#             call += 1
+#             totalCallCnt += 1
 
             raise Exception("Call instr at the end of a list")
         elif operand == "retl":
@@ -258,10 +271,10 @@ def processList(xs, header="", debug=False):
             display.write("<li class='lastChild'>{:<10} {} {} {}</li>".format(address, header, operand, espValue))
 
 
-            # print "ret {}".format(espValue)
+            # print "totalRetCnt {}".format(espValue)
 
-            ret += 1
-            # stack.pop()
+            totalRetCnt += 1
+            # functionStack.pop()
         else:
             if debug: print "{:<10} {} {} {}".format(address, header, operand, remainder)
 
@@ -281,7 +294,7 @@ display.write('<script type="text/javascript" src="htmlextra/CollapsibleLists.js
               + '</script><script type="text/javascript" src="htmlextra/runOnLoad.js">'
               + '</script><link rel="stylesheet" type="text/css" href="htmlextra/style2.css" />')
 display.write('<ul class="collapsibleList"><li>Instructions<ul>')
-processList(cur)
+processList(currentFunctionList)
 
 display.write("</ul>")
 display.write('<script>CollapsibleLists.apply();</script>')
@@ -289,7 +302,7 @@ display.write('<script>CollapsibleLists.apply();</script>')
 
 
 print "\n\n"
-print "call {} ret {} left {}".format(call, ret, len(stack))
+print "totalCallCnt {} totalRetCnt {} left {}".format(totalCallCnt, totalRetCnt, len(functionStack))
 
 sortCallCnt = []
 for key in call_cnt.keys():
