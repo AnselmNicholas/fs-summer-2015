@@ -1,5 +1,5 @@
 import re
-
+import numpy as np
 
 class Lookahead:
     """Lookahead iterator for efficient parsing
@@ -90,7 +90,7 @@ with open(inputFile) as f:
 
                 if not target.startswith("0x") or target[-1] == (")"):  # handle indirect totalCallCnt
                     target = inpt.lookahead().split()[0]
-                
+
                 # print "totalCallCnt {}".format(espValue)
                 currentFunctionList.append(line)
                 currentInstrCount += 1
@@ -311,7 +311,8 @@ for key in call_cnt.keys():
 sortCallCnt.sort(key=lambda x : x[1], reverse=True)
 
 for ele in sortCallCnt[:50]:
-    print "{} is called {} times.".format(*ele)
+    #print ele
+    print "{} is called {} times. Average instr count is {}. Median is {}. {}".format(ele[0], ele[1][0], np.mean(ele[1][1]), np.median(ele[1][1]), ele[1][1])
 
 
 def getFunctionNameCmd(targetAddress, procFile, debug=False):
