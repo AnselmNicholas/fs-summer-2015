@@ -320,16 +320,23 @@ print "totalCallCnt {} totalRetCnt {} left {}".format(totalCallCnt, totalRetCnt,
 
 sortCallCnt = []
 for key in functionInfo.keys():
-    sortCallCnt.append([key, functionInfo[key]])
+    x = functionInfo[key]
+    sortCallCnt.append({"target":key,
+                        "callCount":x["callCount"],
+                        "confidence":1 - (float(sum(x["unresolvedRet"])) / x["callCount"]),
+                        "mean":np.mean(x["instructionCount"]),
+                        "median":np.median(x["instructionCount"]),
+                        "totalInstr":sum(x["instructionCount"])
+                        })
 
-sortCallCnt.sort(key=lambda x : (x[1]["callCount"], x[0]), reverse=True)
+sortCallCnt.sort(key=lambda x : (x["callCount"], x["target"]), reverse=True)
 
 for ele in sortCallCnt[:]:
     # print ele
-    print "{} is called {} times. Confidence is {}. Average instr count is {}. Median is {}. Total instr exec by funct is {}"\
-            .format(ele[0], ele[1]["callCount"],
-                    1 - (float(sum(ele[1]["unresolvedRet"])) / ele[1]["callCount"]),
-                    np.mean(ele[1]["instructionCount"]), np.median(ele[1]["instructionCount"]), sum(ele[1]["instructionCount"]))
+    if ele["callCount"] > 1:
+        print "{target} called {callCount}x. Confidence [{confidence}] Mean instr {mean}. Median {median}. Total instr exec {totalInstr}".format(**ele)
+    else:
+        print "{target} called {callCount}x. Confidence [{confidence}] Instr exec {totalInstr}".format(**ele)
 
 
 def getFunctionNameCmd(targetAddress, procFile, debug=False):
@@ -367,5 +374,5 @@ print "\n\nRun this on the server to get the list of function names.\n\n"
 
 
 for ele in sortCallCnt[:]:
-    getFunctionNameCmd(ele[0], testInput[1])
+    getFunctionNameCmd(ele["target"], testInput[1])
 
