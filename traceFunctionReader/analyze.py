@@ -43,7 +43,7 @@ testInput = [("scwuftpd-skiplib.aiesp", "proc-map-wu-ftpd.txt"),
 testChoice = 0
 testInput = testInput[testChoice]
 
-visualize = 1
+visualize = 0
 
 
 
@@ -121,8 +121,13 @@ with open(inputFile) as f:
                 else:
                     espValue = '%x' % (int(remainder[0][2:], 16) + int(remainder[1], 16) + 4)  # hex(int(remainder[0][2:], 16) + int(remainder[1], 16) + 4)[2:-1]
 
-                if functionStack[-1][0] == espValue:
 
+                if len(functionStack) == 0 or not functionStack[-1][0] == espValue:  # Unable to return
+                    currentInstructionList.append(line)
+                    currentInstrCount += 1
+                    currentFunctionContainUnresolvedRet = 1
+
+                else:
                     currentInstructionList.append(line)
                     currentInstrCount += 1
                     rst = functionStack.pop()
@@ -134,7 +139,7 @@ with open(inputFile) as f:
                     t.append(currentInstructionList)
                     currentInstructionList = t
                     currentInstrCount += rst[2]
-                    if currentFunctionContainUnresolvedRet:
+                    if not currentFunctionContainUnresolvedRet:
                         currentFunctionContainUnresolvedRet = rst[4]
 
 
@@ -143,10 +148,6 @@ with open(inputFile) as f:
                     # display.write("<li class='lastChild'>{:<10} {} {} {}</li></ul></li>".format(address, header, operand, espValue))
                     # header = header[:-1]
 
-                else:
-                    currentInstructionList.append(line)
-                    currentInstrCount += 1
-                    currentFunctionContainUnresolvedRet = 1
 
                     # print "{:<10} {} {} {} \t\t\t\t Err".format(address, header, operand, espValue)
                     # display.write("<li>{:<10} {} {} {} \t\t\t\t Err</li>".format(address, header, operand, espValue))
@@ -172,16 +173,18 @@ with open(inputFile) as f:
 
 
     while len(functionStack):
-
-
         rst = functionStack.pop()
+
+        functionInfo[rst[3]]["instructionCount"].append(currentInstrCount)
+        functionInfo[rst[3]]["unresolvedRet"].append(currentFunctionContainUnresolvedRet)
+
         t = rst[1]
         t.append(currentInstructionList)
         currentInstructionList = t
         currentInstrCount += rst[2]
+        if not currentFunctionContainUnresolvedRet:
+            currentFunctionContainUnresolvedRet = rst[4]
 
-        functionInfo[rst[3]]["instructionCount"].append(currentInstrCount)
-        functionInfo[rst[3]]["unresolvedRet"].append(currentFunctionContainUnresolvedRet)
 
 
 # Processing
@@ -231,7 +234,7 @@ def processList(xs, header="", debug=False):
 
 
                 if debug: print "{:<10} {} {} {} \t\t\t\t Err".format(address, header, operand, espValue)
-                display.write("<li>{:<10} {} {} {} \t\t\t\t Err</li>".format(address, header, operand, espValue))
+                display.write("<li><font color='red'>{:<10} {} {} {} \t\t\t\t Err</font></li>".format(address, header, operand, espValue))
 
 
 
@@ -323,7 +326,10 @@ sortCallCnt.sort(key=lambda x : (x[1]["callCount"], x[0]), reverse=True)
 
 for ele in sortCallCnt[:]:
     # print ele
-    print "{} is called {} times. Average instr count is {}. Median is {}. Total instr exec by funct is {}".format(ele[0], ele[1]["callCount"], np.mean(ele[1]["instructionCount"]), np.median(ele[1]["instructionCount"]), sum(ele[1]["instructionCount"]))
+    print "{} is called {} times. Confidence is {}. Average instr count is {}. Median is {}. Total instr exec by funct is {}"\
+            .format(ele[0], ele[1]["callCount"],
+                    1 - (float(sum(ele[1]["unresolvedRet"])) / ele[1]["callCount"]),
+                    np.mean(ele[1]["instructionCount"]), np.median(ele[1]["instructionCount"]), sum(ele[1]["instructionCount"]))
 
 
 def getFunctionNameCmd(targetAddress, procFile, debug=False):
