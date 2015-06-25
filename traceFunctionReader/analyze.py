@@ -34,8 +34,6 @@ sys.setrecursionlimit(10000000)
 inpt = []
 
 
-
-
 testInput = [("scwuftpd-skiplib.aiesp", "proc-map-wu-ftpd.txt"),
              ("3150-out-noskip.aiesp", "bof1-maps", 90897, 91589),  # 0x804856b, 0x8048588
              ("3577-bof2-noskip.aiesp", "bof2-maps"),
@@ -45,6 +43,7 @@ testInput = [("scwuftpd-skiplib.aiesp", "proc-map-wu-ftpd.txt"),
 testChoice = 0
 testInput = testInput[testChoice]
 
+visualize = 0
 
 
 
@@ -52,11 +51,13 @@ testInput = testInput[testChoice]
 
 functionStack = []
 totalCallCnt = totalRetCnt = 0
-currentFunctionList = []  # Current function
+currentInstructionList = []  # Current function
 currentInstrCount = 0
+currentFunctionCallCnt = 0
+currentFunctionErrorCount = 0
 
 call_cnt = {}
-
+totalCallCnt = totalRetCnt = 0
 inputFile = testInput[0]
 
 
@@ -72,14 +73,14 @@ with open(inputFile) as f:
     inpt = Lookahead(f)
 
     for idx, line in enumerate(inpt):
-
         if lmin > 0:
             if idx < lmin: continue
         if lmax > 0:
             if idx > lmax: break
 
+        line = line.strip()
 
-        line_input = re.split("\W+", line.strip(), 2)
+        line_input = re.split("\W+", line, 2)
         address = line_input[0]
         operand = line_input[1]
         remainder = line_input[2] if len(line_input) > 2 else None
@@ -92,12 +93,14 @@ with open(inputFile) as f:
                     target = inpt.lookahead().split()[0]
 
                 # print "totalCallCnt {}".format(espValue)
-                currentFunctionList.append(line)
+                currentInstructionList.append(line)
                 currentInstrCount += 1
-                functionStack.append([espValue, currentFunctionList, currentInstrCount, target])
-                currentFunctionList = []
+                currentFunctionCallCnt += 1
+                functionStack.append([espValue, currentInstructionList, currentInstrCount, target])
+                currentInstructionList = []
                 currentInstrCount = 0
-
+                currentFunctionCallCnt = 0
+                currentFunctionErrorCount = 0
 
 
                 cc = call_cnt.get(target, [0, []])
@@ -119,12 +122,12 @@ with open(inputFile) as f:
 
                 if functionStack[-1][0] == espValue:
 
-                    currentFunctionList.append(line)
+                    currentInstructionList.append(line)
                     currentInstrCount += 1
                     rst = functionStack.pop()
                     t = rst[1]
-                    t.append(currentFunctionList)
-                    currentFunctionList = t
+                    t.append(currentInstructionList)
+                    currentInstructionList = t
                     currentInstrCount += rst[2]
 
                     call_cnt[rst[3]][1].append(currentInstrCount)
@@ -134,7 +137,7 @@ with open(inputFile) as f:
                     # header = header[:-1]
 
                 else:
-                    currentFunctionList.append(line)
+                    currentInstructionList.append(line)
                     currentInstrCount += 1
                     # print "{:<10} {} {} {} \t\t\t\t Err".format(address, header, operand, espValue)
                     # display.write("<li>{:<10} {} {} {} \t\t\t\t Err</li>".format(address, header, operand, espValue))
@@ -147,7 +150,7 @@ with open(inputFile) as f:
                 # functionStack.pop()
             else:
 
-                currentFunctionList.append(line)
+                currentInstructionList.append(line)
                 currentInstrCount += 1
                 # print "{:<10} {} {} {}".format(address, header, operand, remainder)
 
@@ -164,15 +167,15 @@ with open(inputFile) as f:
 
         rst = functionStack.pop()
         t = rst[1]
-        t.append(currentFunctionList)
-        currentFunctionList = t
+        t.append(currentInstructionList)
+        currentInstructionList = t
         currentInstrCount += rst[2]
 
         call_cnt[rst[3]][1].append(currentInstrCount)
 
 
 # Processing
-totalCallCnt = totalRetCnt = 0
+
 
 def butlast(xs):
     xs = iter(xs)
@@ -203,7 +206,7 @@ def processList(xs, header="", debug=False):
                 display.write("<li>{:<10} {} {} {}<ul>".format(address, header, operand, espValue))
                 # header += ":"
 
-                totalCallCnt += 1
+
             elif operand == "retl":
 
                 remainder = remainder.split()
@@ -224,7 +227,7 @@ def processList(xs, header="", debug=False):
 
                 # print "totalRetCnt {}".format(espValue)
 
-                totalRetCnt += 1
+
 
             else:
 
@@ -270,7 +273,7 @@ def processList(xs, header="", debug=False):
 
             # print "totalRetCnt {}".format(espValue)
 
-            totalRetCnt += 1
+
             # functionStack.pop()
         else:
             if debug: print "{:<10} {} {} {}".format(address, header, operand, remainder)
@@ -284,17 +287,18 @@ def processList(xs, header="", debug=False):
 
 
 # Run
+if visualize:
 
 
-display = open("output.html", "w")
-display.write('<script type="text/javascript" src="htmlextra/CollapsibleLists.js">'
-              + '</script><script type="text/javascript" src="htmlextra/runOnLoad.js">'
-              + '</script><link rel="stylesheet" type="text/css" href="htmlextra/style2.css" />')
-display.write('<ul class="collapsibleList"><li>Instructions<ul>')
-processList(currentFunctionList)
+    display = open("output.html", "w")
+    display.write('<script type="text/javascript" src="htmlextra/CollapsibleLists.js">'
+                  + '</script><script type="text/javascript" src="htmlextra/runOnLoad.js">'
+                  + '</script><link rel="stylesheet" type="text/css" href="htmlextra/style2.css" />')
+    display.write('<ul class="collapsibleList"><li>Instructions<ul>')
+    processList(currentInstructionList)
 
-display.write("</ul>")
-display.write('<script>CollapsibleLists.apply();</script>')
+    display.write("</ul>")
+    display.write('<script>CollapsibleLists.apply();</script>')
 
 
 
