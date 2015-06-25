@@ -43,7 +43,7 @@ testInput = [("scwuftpd-skiplib.aiesp", "proc-map-wu-ftpd.txt"),
 testChoice = 0
 testInput = testInput[testChoice]
 
-visualize = 0
+visualize = 1
 
 
 
@@ -54,7 +54,8 @@ totalCallCnt = totalRetCnt = 0
 currentInstructionList = []  # Current function
 currentInstrCount = 0
 currentFunctionCallCnt = 0
-currentFunctionErrorCount = 0
+currentFunctionContainUnresolvedRet = 0
+
 
 functionInfo = {}
 totalCallCnt = totalRetCnt = 0
@@ -96,14 +97,14 @@ with open(inputFile) as f:
                 currentInstructionList.append(line)
                 currentInstrCount += 1
                 currentFunctionCallCnt += 1
-                functionStack.append([espValue, currentInstructionList, currentInstrCount, target])
+                functionStack.append([espValue, currentInstructionList, currentInstrCount, target, currentFunctionContainUnresolvedRet])
                 currentInstructionList = []
                 currentInstrCount = 0
                 currentFunctionCallCnt = 0
-                currentFunctionErrorCount = 0
+                currentFunctionContainUnresolvedRet = 0
 
                 # functionInfo[target] =
-                d = functionInfo.get(target, {"callCount" :0, "instructionCount" : []})
+                d = functionInfo.get(target, {"callCount" :0, "instructionCount" : [], "unresolvedRet":[]})
                 d["callCount"] += 1
                 functionInfo[target] = d
 
@@ -125,12 +126,18 @@ with open(inputFile) as f:
                     currentInstructionList.append(line)
                     currentInstrCount += 1
                     rst = functionStack.pop()
+
+                    functionInfo[rst[3]]["instructionCount"].append(currentInstrCount)
+                    functionInfo[rst[3]]["unresolvedRet"].append(currentFunctionContainUnresolvedRet)
+
                     t = rst[1]
                     t.append(currentInstructionList)
                     currentInstructionList = t
                     currentInstrCount += rst[2]
+                    if currentFunctionContainUnresolvedRet:
+                        currentFunctionContainUnresolvedRet = rst[4]
 
-                    functionInfo[rst[3]]["instructionCount"].append(currentInstrCount)
+
 
                     # print "{:<10} {} {} {}".format(address, header, operand, espValue)
                     # display.write("<li class='lastChild'>{:<10} {} {} {}</li></ul></li>".format(address, header, operand, espValue))
@@ -139,6 +146,8 @@ with open(inputFile) as f:
                 else:
                     currentInstructionList.append(line)
                     currentInstrCount += 1
+                    currentFunctionContainUnresolvedRet = 1
+
                     # print "{:<10} {} {} {} \t\t\t\t Err".format(address, header, operand, espValue)
                     # display.write("<li>{:<10} {} {} {} \t\t\t\t Err</li>".format(address, header, operand, espValue))
 
@@ -172,6 +181,7 @@ with open(inputFile) as f:
         currentInstrCount += rst[2]
 
         functionInfo[rst[3]]["instructionCount"].append(currentInstrCount)
+        functionInfo[rst[3]]["unresolvedRet"].append(currentFunctionContainUnresolvedRet)
 
 
 # Processing
