@@ -56,7 +56,7 @@ currentInstrCount = 0
 currentFunctionCallCnt = 0
 currentFunctionErrorCount = 0
 
-call_cnt = {}
+functionInfo = {}
 totalCallCnt = totalRetCnt = 0
 inputFile = testInput[0]
 
@@ -102,10 +102,10 @@ with open(inputFile) as f:
                 currentFunctionCallCnt = 0
                 currentFunctionErrorCount = 0
 
-
-                cc = call_cnt.get(target, [0, []])
-                cc[0] += 1
-                call_cnt[target] = cc
+                # functionInfo[target] =
+                d = functionInfo.get(target, {"callCount" :0, "instructionCount" : []})
+                d["callCount"] += 1
+                functionInfo[target] = d
 
                 # print "{:<10} {} {} {}".format(address, header, operand, espValue)
                 # display.write("<li>{:<10} {} {} {}<ul>".format(address, header, operand, espValue))
@@ -130,7 +130,7 @@ with open(inputFile) as f:
                     currentInstructionList = t
                     currentInstrCount += rst[2]
 
-                    call_cnt[rst[3]][1].append(currentInstrCount)
+                    functionInfo[rst[3]]["instructionCount"].append(currentInstrCount)
 
                     # print "{:<10} {} {} {}".format(address, header, operand, espValue)
                     # display.write("<li class='lastChild'>{:<10} {} {} {}</li></ul></li>".format(address, header, operand, espValue))
@@ -171,7 +171,7 @@ with open(inputFile) as f:
         currentInstructionList = t
         currentInstrCount += rst[2]
 
-        call_cnt[rst[3]][1].append(currentInstrCount)
+        functionInfo[rst[3]]["instructionCount"].append(currentInstrCount)
 
 
 # Processing
@@ -306,14 +306,14 @@ print "\n\n"
 print "totalCallCnt {} totalRetCnt {} left {}".format(totalCallCnt, totalRetCnt, len(functionStack))
 
 sortCallCnt = []
-for key in call_cnt.keys():
-    sortCallCnt.append([key, call_cnt[key]])
+for key in functionInfo.keys():
+    sortCallCnt.append([key, functionInfo[key]])
 
-sortCallCnt.sort(key=lambda x : x[1], reverse=True)
+sortCallCnt.sort(key=lambda x : (x[1]["callCount"], x[0]), reverse=True)
 
 for ele in sortCallCnt[:]:
     # print ele
-    print "{} is called {} times. Average instr count is {}. Median is {}. Total instr exec by funct is {}".format(ele[0], ele[1][0], np.mean(ele[1][1]), np.median(ele[1][1]), sum(ele[1][1]))
+    print "{} is called {} times. Average instr count is {}. Median is {}. Total instr exec by funct is {}".format(ele[0], ele[1]["callCount"], np.mean(ele[1]["instructionCount"]), np.median(ele[1]["instructionCount"]), sum(ele[1]["instructionCount"]))
 
 
 def getFunctionNameCmd(targetAddress, procFile, debug=False):
