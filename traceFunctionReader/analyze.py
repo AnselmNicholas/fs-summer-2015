@@ -34,16 +34,21 @@ sys.setrecursionlimit(10000000)
 inpt = []
 
 
-testInput = [("scwuftpd-skiplib.aiesp", "proc-map-wu-ftpd.txt"),
-             ("3150-out-noskip.aiesp", "bof1-maps", 90897, 91589),  # 0x804856b, 0x8048588
-             ("3577-bof2-noskip.aiesp", "bof2-maps"),
+testInput = [("scwuftpd-skiplib.aiesp", "scwuftpd-skiplib.modload"),  # 0
+             ("3150-out-noskip.aiesp", "bof1-maps", 90898, 93780),  # 90897, 91589),  # 0x804856b, 0x8048588
+             ("3577-bof2-noskip.aiesp", "bof2-maps"),  # 2
              ("3564-bof2-skip.aiesp", "bof2-maps"),
-             ("5802-readme.aiesp", "")  # [91219:91912]
+             ("5802-readme.aiesp", ""),  # [91219:91912]
+             ("3150-out-noskip.aiesp", "bof1-maps"),  # 5
+             ("foo.aiesp", "foo-maps", 90812, 91549),
+             ("foo2.aiesp", "foo2-maps", 90812, 162730),
+             ("foo2-mltest.aiesp", "foo2-mltest-modload", 90812, 162730)
              ]
 testChoice = 0
 testInput = testInput[testChoice]
 
-visualize = 0
+visualize = 1
+simplified = 1
 
 
 
@@ -215,8 +220,8 @@ def processList(xs, header="", debug=False):
                 espValue = remainder.split()[-1]
                 # print "totalCallCnt {}".format(espValue)
 
-                if debug: print "{:<10} {} {} {}".format(address, header, operand, espValue)
-                display.write("<li>{:<10} {} {} {}<ul>".format(address, header, operand, espValue))
+                if debug: print "{:<10} {} {} {}".format(address, header, operand, remainder)
+                display.write("<li>{:<10} {} {} {}<ul>".format(address, header, operand, remainder))
                 # header += ":"
 
 
@@ -326,17 +331,27 @@ for key in functionInfo.keys():
                         "confidence":1 - (float(sum(x["unresolvedRet"])) / x["callCount"]),
                         "mean":np.mean(x["instructionCount"]),
                         "median":np.median(x["instructionCount"]),
-                        "totalInstr":sum(x["instructionCount"])
+                        "totalInstr":sum(x["instructionCount"]),
+                        "min":min(x["instructionCount"]), "max":max(x["instructionCount"])
                         })
 
-sortCallCnt.sort(key=lambda x : (x["callCount"], x["target"]), reverse=True)
+sortCallCnt.sort(key=lambda x : (x["totalInstr"], x["callCount"], x["target"]), reverse=True)
+
+
+simplified_fmt = "{target} {callCount} {confidence} {min} {max} {mean} {median} {totalInstr}"
+if simplified:
+    print simplified_fmt
 
 for ele in sortCallCnt[:]:
     # print ele
-    if ele["callCount"] > 1:
-        print "{target} called {callCount}x. Confidence [{confidence}] Mean instr {mean}. Median {median}. Total instr exec {totalInstr}".format(**ele)
+
+    if not simplified:
+        if ele["callCount"] > 1:
+            print "{target} called {callCount}x. Confidence [{confidence}] Mean instr {mean}. Median {median}. Total instr exec {totalInstr}".format(**ele)
+        else:
+            print "{target} called {callCount}x. Confidence [{confidence}] Instr exec {totalInstr}".format(**ele)
     else:
-        print "{target} called {callCount}x. Confidence [{confidence}] Instr exec {totalInstr}".format(**ele)
+        print simplified_fmt.format(**ele)
 
 
 def getFunctionNameCmd(targetAddress, procFile, debug=False):
@@ -364,9 +379,45 @@ def getFunctionNameCmd(targetAddress, procFile, debug=False):
             offset = '%x' % (targetAddress - src)  # hex(targetAddress - src)[2:-1]
             location = line.split()[-1]
 
-            print "objdump -d {} | grep {}".format(location, offset)
+            if not location == "0":
+                print "objdump -d {} | grep {}  #0x{:x}".format(location, offset, targetAddress)
+            else:
+                print "#Anon region for 0x{:x}".format(targetAddress)
             return
-    print "Not Found {}".format(targetAddress)
+    print "#Not Found 0x{:x}".format(targetAddress)
+
+def getFunctionNameCmd2(targetAddress, procFile, debug=False):
+    """Print command to execute in console to fetch function name.
+
+    Input:
+    targetAddress - address in the form of a hexadecimal string appended with 0x
+    procFile - output of gentrace
+    """
+    try:
+        targetAddress = int(targetAddress[2:], 16)
+    except ValueError:
+        print "Dynamic jump detected {}".format(targetAddress)
+        return
+
+    for line in open(procFile):
+        if not line.startswith("This is modload():"): continue
+        l2 = line.split()
+        src, dst = l2[-2:]
+        src = int(src, 16)
+        dst = int(dst, 16)
+
+        if src <= targetAddress and targetAddress <= dst:
+            if debug: print line
+            offset = '%x' % (targetAddress - src)  # hex(targetAddress - src)[2:-1]
+            location = l2[3]
+
+            if not location == "0":
+                # print "objdump -d {} | grep 'call   {}' -m 1 #0x{:x}".format(location, offset, targetAddress)
+                print "{} {} 0x{:x}".format(location, offset, targetAddress)
+            else:
+                print "#Anon region for 0x{:x}".format(targetAddress)
+            return
+    print "#Not Found 0x{:x}".format(targetAddress)
 
 
 
@@ -374,5 +425,5 @@ print "\n\nRun this on the server to get the list of function names.\n\n"
 
 
 for ele in sortCallCnt[:]:
-    getFunctionNameCmd(ele["target"], testInput[1])
+    getFunctionNameCmd2(ele["target"], testInput[1])
 
