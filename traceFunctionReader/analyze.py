@@ -2,6 +2,8 @@ import re
 import numpy as np
 import logging
 import sys
+import os
+from tempfile import mkstemp
 
 class Lookahead:
     """Lookahead iterator for efficient parsing
@@ -435,6 +437,16 @@ def runAnalysis(aiesp, modload, lmin=-1, lmax=-1, recursionLimit=10000000, visua
 
     return functionFetchInpt
 
+
+def genAIESP(trace):
+    cmd = "bin/fetchAIESP {0}".format(trace)
+
+    handler, name = mkstemp()
+    with os.popen(cmd) as result, open(name, "w") as f:
+        f.writelines(result)
+
+    return name
+
 def main():
     import argparse, os
     parser = argparse.ArgumentParser(description="Analyze function in trace file.")
@@ -451,7 +463,9 @@ def main():
     if args.verbose == 1: logging.basicConfig(level=logging.INFO)
     if args.verbose > 1: logging.basicConfig(level=logging.DEBUG)
 
-    runAnalysis(args.trace, args.modload)
+
+    name = genAIESP(args.trace)
+    runAnalysis(name, args.modload, chain=False)
 
 if __name__ == "__main__":
     main()
