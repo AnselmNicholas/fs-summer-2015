@@ -4,6 +4,7 @@ import logging
 import sys
 import os
 from tempfile import mkstemp
+import cmd
 
 class Lookahead:
     """Lookahead iterator for efficient parsing
@@ -39,7 +40,7 @@ def butlast(xs):
         yield prev
         prev = x
 
-def runAnalysis(aiesp, modload, lmin=-1, lmax=-1, recursionLimit=10000000, visualize=0, simplified=1, chain=True):
+def runAnalysis(aiesp, modload, lmin=-1, lmax=-1, recursionLimit=10000000, visualize=0, simplified=1, chain=False):
     logger = logging.getLogger(__name__)
     sys.setrecursionlimit(recursionLimit)
 
@@ -342,20 +343,21 @@ def runAnalysis(aiesp, modload, lmin=-1, lmax=-1, recursionLimit=10000000, visua
     sortCallCnt.sort(key=lambda x : (x["totalInstr"], x["callCount"], x["target"]), reverse=True)
 
 
-    simplified_fmt = "{target} {callCount} {confidence} {min} {max} {mean} {median} {totalInstr}"
-    if simplified:
-        print simplified_fmt
+    if not chain:
+        simplified_fmt = "{target} {callCount} {confidence} {min} {max} {mean} {median} {totalInstr}"
+        if simplified:
+            print simplified_fmt
 
-    for ele in sortCallCnt[:]:
-        # print ele
+        for ele in sortCallCnt[:]:
+            # print ele
 
-        if not simplified:
-            if ele["callCount"] > 1:
-                print "{target} called {callCount}x. Confidence [{confidence}] Mean instr {mean}. Median {median}. Total instr exec {totalInstr}".format(**ele)
+            if not simplified:
+                if ele["callCount"] > 1:
+                    print "{target} called {callCount}x. Confidence [{confidence}] Mean instr {mean}. Median {median}. Total instr exec {totalInstr}".format(**ele)
+                else:
+                    print "{target} called {callCount}x. Confidence [{confidence}] Instr exec {totalInstr}".format(**ele)
             else:
-                print "{target} called {callCount}x. Confidence [{confidence}] Instr exec {totalInstr}".format(**ele)
-        else:
-            print simplified_fmt.format(**ele)
+                print simplified_fmt.format(**ele)
 
 
     def getFunctionNameCmd(targetAddress, procFile, debug=False):
@@ -423,29 +425,111 @@ def runAnalysis(aiesp, modload, lmin=-1, lmax=-1, recursionLimit=10000000, visua
         return "#Not Found 0x{:x}".format(targetAddress)
 
 
-
-    print "\n\nRun this on the server to get the list of function names.\n\n"
-
-
     functionFetchInpt = []
     for ele in sortCallCnt[:]:
         functionFetchInpt.append(getFunctionNameCmd2(ele["target"], testInput[1]))
 
-    if not chain:
+    if logger.getEffectiveLevel() <= logging.DEBUG:
         for line in functionFetchInpt:
-            print line
+            logger.debug(line)
 
-    return functionFetchInpt
+    return (sortCallCnt, functionFetchInpt)
 
 
 def genAIESP(trace):
-    cmd = "bin/fetchAIESP {0}".format(trace)
+    logger = logging.getLogger(__name__)
 
     handler, name = mkstemp()
+    logger.info("Temp aiesp file created at " + name)
+
+    cmd = "bin/fetchAIESP {0}".format(trace)
+    logger.debug("Executing command: " + cmd)
+
     with os.popen(cmd) as result, open(name, "w") as f:
         f.writelines(result)
 
+    logger.info("aiesp generated")
     return name
+
+def getFunctionName(functionFetchInpt):
+    logger = logging.getLogger(__name__)
+
+    ret = []
+    for line in functionFetchInpt:
+        if line[:1] == "#" or not len(line):
+            ret.append(line)
+            logger.debug("skipping: " + line)
+            continue
+
+        try:
+            # try 1
+            found = False
+            location, offset, target = line.split()
+
+            cmd = "objdump -d {0} | grep 'call   {1}' -m 1".format(location, offset)
+            logger.debug("Executing command: " + cmd)
+            with os.popen(cmd) as result:
+                rst = result.read().strip()
+
+                if rst == "":
+                    # print location, offset, target
+                    pass
+                else:
+                    name = rst.split()[-1]
+                    ret.append(name)
+                    logger.debug("Function name is " + name)
+                    # print "f"
+                    found = True
+                    pass
+
+            if found: continue
+
+            # try 2
+            cmd = "objdump -d {0} | grep 'call   {1}' -m 1".format(location, target[2:])
+            logger.debug("Executing command: " + cmd)
+            with os.popen(cmd) as result:
+                rst = result.read().strip()
+
+                if rst == "":
+                    # print location, offset, target
+                    pass
+                else:
+                    name = rst.split()[-1]
+                    ret.append(name)
+                    logger.debug("Function name is " + name)
+                    # print "f"
+                    found = True
+
+            if found: continue
+
+            # try 3
+            cmd = "objdump -d {0} | grep ^{1:0>8} -m 1".format(location, offset)
+            logger.debug("Executing command: " + cmd)
+            with os.popen(cmd) as result:
+                rst = result.read().strip()
+
+                if rst == "":
+                    # print location, offset, target
+                    pass
+                else:
+                    name = rst.split()[-1]
+                    ret.append(name)
+                    logger.debug("Function name is " + name)
+                    # print "f"
+                    found = True
+
+            if found: continue
+
+
+
+            ret.append("#Unknown {0} {1} {2}".format(location, offset, target))
+            logger.debug("Function unknown")
+        except:
+            import sys
+            print "Unexpected error:", sys.exc_info()[0]
+            print line
+            raise
+    return ret
 
 def main():
     import argparse, os
@@ -465,7 +549,11 @@ def main():
 
 
     name = genAIESP(args.trace)
-    runAnalysis(name, args.modload, chain=False)
+    sortCallCnt, functionFetchInpt = runAnalysis(name, args.modload, chain=True)
+    functNames = getFunctionName(functionFetchInpt)
+
+    os.unlink(name)
+
 
 if __name__ == "__main__":
     main()
