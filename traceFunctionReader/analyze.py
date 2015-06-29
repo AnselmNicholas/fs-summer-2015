@@ -554,6 +554,20 @@ def main():
 
     os.unlink(name)
 
+    outputFMT = "{target}, {callCount}, {confidence}, {min}, {max}, {mean}, {median}, {totalInstr}, {lib}, {offset}, {functName}"
+    print outputFMT
+    sortCallCnt = iter(sortCallCnt)
+    functionFetchInpt = iter(functionFetchInpt)
+    functNames = iter(functNames)
+
+    for ele in sortCallCnt:
+        libOffset = functionFetchInpt.next().split()
+        functName = functNames.next()
+
+        ele = dict(ele, lib=libOffset[0], offset=libOffset[1], functName=functName)
+
+        print outputFMT.format(**ele)
+
 
 if __name__ == "__main__":
     main()
