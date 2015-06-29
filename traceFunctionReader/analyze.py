@@ -440,7 +440,7 @@ def runAnalysis(aiesp, modload, lmin=-1, lmax=-1, recursionLimit=10000000, visua
                 else:
                     return "#Anon region for 0x{0:x}".format(targetAddress)
 
-        return "#Not Found 0x{:x}".format(targetAddress)
+        return "#Not Found 0x{0:x}".format(targetAddress)
 
 
     functionFetchInpt = []
