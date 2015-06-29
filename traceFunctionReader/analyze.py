@@ -1,10 +1,28 @@
 import re
-import numpy as np
 import logging
 import sys
 import os
 from tempfile import mkstemp
 import cmd
+
+try:
+    import numpy as np
+except ImportError:
+    class np:
+        '''
+        Fix when numpy is not installed.
+        '''
+        @staticmethod
+        def mean(x):
+            return float(sum(x)) / max(len(x), 1)
+
+        @staticmethod
+        def median(x):
+            # http://stackoverflow.com/a/29870273/1364256
+            m, r = divmod(len(x), 2)
+            if r:
+                return sorted(x)[m]
+            return float(sum(sorted(x)[m - 1:m + 1])) / 2
 
 class Lookahead:
     """Lookahead iterator for efficient parsing
@@ -326,7 +344,7 @@ def runAnalysis(aiesp, modload, lmin=-1, lmax=-1, recursionLimit=10000000, visua
 
 
 
-    logger.info("totalCallCnt {} totalRetCnt {} left {}".format(totalCallCnt, totalRetCnt, len(functionStack)))
+    logger.info("totalCallCnt {0} totalRetCnt {1} left {2}".format(totalCallCnt, totalRetCnt, len(functionStack)))
 
     sortCallCnt = []
     for key in functionInfo.keys():
@@ -402,7 +420,7 @@ def runAnalysis(aiesp, modload, lmin=-1, lmax=-1, recursionLimit=10000000, visua
         try:
             targetAddress = int(targetAddress[2:], 16)
         except ValueError:
-            return "Dynamic jump detected {}".format(targetAddress)
+            return "Dynamic jump detected {0}".format(targetAddress)
 
         for line in open(procFile):
             if not line.startswith("This is modload():"): continue
@@ -418,9 +436,9 @@ def runAnalysis(aiesp, modload, lmin=-1, lmax=-1, recursionLimit=10000000, visua
 
                 if not location == "0":
                     # print "objdump -d {} | grep 'call   {}' -m 1 #0x{:x}".format(location, offset, targetAddress)
-                    return "{} {} 0x{:x}".format(location, offset, targetAddress)
+                    return "{0} {1} 0x{2:x}".format(location, offset, targetAddress)
                 else:
-                    return "#Anon region for 0x{:x}".format(targetAddress)
+                    return "#Anon region for 0x{0:x}".format(targetAddress)
 
         return "#Not Found 0x{:x}".format(targetAddress)
 
