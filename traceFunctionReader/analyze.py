@@ -445,8 +445,9 @@ def genAIESP(trace):
     cmd = "bin/fetchAIESP {0}".format(trace)
     logger.debug("Executing command: " + cmd)
 
-    with os.popen(cmd) as result, open(name, "w") as f:
-        f.writelines(result)
+    with os.popen(cmd) as result:
+        with open(name, "w") as f:
+            f.writelines(result)
 
     logger.info("aiesp generated")
     return name
