@@ -388,7 +388,7 @@ def runAnalysis(aiesp, modload, lmin=-1, lmax=-1, recursionLimit=10000000, visua
                 return
         print "#Not Found 0x{:x}".format(targetAddress)
 
-    def getFunctionNameCmd2(targetAddress, procFile, debug=False, chain=False):
+    def getFunctionNameCmd2(targetAddress, procFile, debug=False):
         """Print command to execute in console to fetch function name.
 
         Input:
@@ -398,8 +398,7 @@ def runAnalysis(aiesp, modload, lmin=-1, lmax=-1, recursionLimit=10000000, visua
         try:
             targetAddress = int(targetAddress[2:], 16)
         except ValueError:
-            print "Dynamic jump detected {}".format(targetAddress)
-            return
+            return "Dynamic jump detected {}".format(targetAddress)
 
         for line in open(procFile):
             if not line.startswith("This is modload():"): continue
@@ -415,21 +414,26 @@ def runAnalysis(aiesp, modload, lmin=-1, lmax=-1, recursionLimit=10000000, visua
 
                 if not location == "0":
                     # print "objdump -d {} | grep 'call   {}' -m 1 #0x{:x}".format(location, offset, targetAddress)
-                    print "{} {} 0x{:x}".format(location, offset, targetAddress)
+                    return "{} {} 0x{:x}".format(location, offset, targetAddress)
                 else:
-                    print "#Anon region for 0x{:x}".format(targetAddress)
-                return
-        print "#Not Found 0x{:x}".format(targetAddress)
+                    return "#Anon region for 0x{:x}".format(targetAddress)
+
+        return "#Not Found 0x{:x}".format(targetAddress)
 
 
 
     print "\n\nRun this on the server to get the list of function names.\n\n"
 
-    if chain:
-        chainRet = []
-    for ele in sortCallCnt[:]:
-        getFunctionNameCmd2(ele["target"], testInput[1], chain=chain)
 
+    functionFetchInpt = []
+    for ele in sortCallCnt[:]:
+        functionFetchInpt.append(getFunctionNameCmd2(ele["target"], testInput[1]))
+
+    if not chain:
+        for line in functionFetchInpt:
+            print line
+
+    return functionFetchInpt
 
 def main():
     import argparse, os
