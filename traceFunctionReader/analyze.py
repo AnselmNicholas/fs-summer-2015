@@ -454,13 +454,13 @@ def runAnalysis(aiesp, modload, lmin=-1, lmax=-1, recursionLimit=10000000, visua
     return (sortCallCnt, functionFetchInpt)
 
 
-def genAIESP(trace):
+def genAIESP(trace, bindir=""):
     logger = logging.getLogger(__name__)
 
     handler, name = mkstemp()
     logger.info("Temp aiesp file created at " + name)
 
-    cmd = "bin/fetchAIESP {0}".format(trace)
+    cmd = "{0}bin/fetchAIESP {1}".format(bindir, trace)
     logger.debug("Executing command: " + cmd)
 
     with os.popen(cmd) as result:
@@ -551,7 +551,7 @@ def getFunctionName(functionFetchInpt):
     return ret
 
 def main():
-    import argparse, os
+    import argparse
     parser = argparse.ArgumentParser(description="Analyze function in trace file.")
     parser.add_argument("trace", help="Path to trace file (*.bpt).")
     parser.add_argument("modload", help="Output of gentrace.")
@@ -567,7 +567,7 @@ def main():
     if args.verbose > 1: logging.basicConfig(level=logging.DEBUG)
 
 
-    name = genAIESP(args.trace)
+    name = genAIESP(args.trace, os.path.dirname(os.path.realpath(__file__)) + "/")
     sortCallCnt, functionFetchInpt = runAnalysis(name, args.modload, chain=True)
     functNames = getFunctionName(functionFetchInpt)
 
