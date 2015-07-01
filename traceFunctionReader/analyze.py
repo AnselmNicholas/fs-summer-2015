@@ -573,7 +573,7 @@ def main():
 
     os.unlink(name)
 
-    outputFMT = "{target}, {callCount}, {confidence}, {min}, {max}, {mean}, {median}, {totalInstr}, {lib}, {offset}, {functName}"
+    outputFMT = "{target}, {callCount}, {confidence}, {min}, {max}, {mean}, {median}, {totalInstr}, {lib}, {offset}, {functName},{skiplib}"
     print outputFMT
     sortCallCnt = iter(sortCallCnt)
     functionFetchInpt = iter(functionFetchInpt)
@@ -583,7 +583,14 @@ def main():
         libOffset = functionFetchInpt.next().split()
         functName = functNames.next()
 
-        ele = dict(ele, lib=libOffset[0], offset=libOffset[1], functName=functName)
+        skiplibLine = ""
+        
+        if not functName.startswith("#") and "@" not in functName and "+" not in functName:
+            libName = libOffset[0].split("/")[-1]
+            functN = functName.split(">")[0].split("<")[1]
+            skiplibLine = "{0}:{1}".format(libName, functN)
+
+        ele = dict(ele, lib=libOffset[0], offset=libOffset[1], functName=functName, skiplib=skiplibLine)
 
         print outputFMT.format(**ele)
 
