@@ -199,7 +199,7 @@ Ouput:
 def fetchParam(trace_file, frame, paramCnt):
     logger = logging.getLogger(__name__)
     
-    cmd = "bin/fetchParam {} {} {}".format(trace_file, frame, paramCnt)
+    cmd = "bin/fetchParam {0} {1} {2}".format(trace_file, frame, paramCnt)
     logger.info("Executing: [%s]", cmd)
     with os.popen(cmd) as result:
         rst = result.read()
@@ -297,12 +297,12 @@ def run(functions_file, trace_file, binary_file, use_gdb=False):
     ret = {}
     for address in addrFrameMap.keys():
         for frame in addrFrameMap[address]:
-            logger.info("Function: {}, Frame: {}".format(dstAddresses[address], frame))
+            logger.info("Function: {0}, Frame: {1}".format(dstAddresses[address], frame))
             firstMemoryFrameNo = fetchParam(trace_file, frame, functions[dstAddresses[address]])
             ret.setdefault(dstAddresses[address], {})[frame] = firstMemoryFrameNo
             logger.info("Output for fetchParam: %s", firstMemoryFrameNo)
             
-    logger.info("returning: {}".format(ret))
+    logger.info("returning: {0}".format(ret))
     return ret
     
 def main():
