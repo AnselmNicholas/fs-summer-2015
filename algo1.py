@@ -5,6 +5,11 @@ from detCorruptTarget import findCorruptionTarget
 import argparse
 
 def slice(trace_benign, insn, arch=32):
+    """Perform the slice and return the result as a string.
+    
+    Executes the following command
+        binslicer-{arch} {trace_benign} {insn}:0
+    """
     logger = logging.getLogger(__name__)
 
     logger.info("Slicing %s at %s", trace_benign, insn)
@@ -19,6 +24,14 @@ def slice(trace_benign, insn, arch=32):
     return rst
 
 def fetchMemoryError(trace_error, arch=32):
+    """Run cp_detect and return result as a list of dict.
+    
+    Executes the following command
+        cp_detect -{arch} {trace_error}
+        
+    Element in dict includes the following
+        baseMemoryReg, indexMemoryReg, valueReg, insn, insnAddr
+    """
     logger = logging.getLogger(__name__)
 
     logger.info("Detecting memory error of %s", trace_error)
@@ -53,7 +66,9 @@ def fetchMemoryError(trace_error, arch=32):
                 currentVal["insnAddr"] = addr
             else:
                 logger.warning("Unhandled cp_detect output: %s", line)
+                
         ret.append(currentVal)
+        
     return ret
 
 def run():
