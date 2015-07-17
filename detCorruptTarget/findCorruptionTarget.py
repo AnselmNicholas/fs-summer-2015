@@ -1,8 +1,11 @@
+from __future__ import absolute_import
+
 import pygraphviz as pgv
 import collections
 import argparse
 import os
 import logging
+
 
 def getCorruptionTargets(src, target, graph):
 #     dfg = pgv.AGraph("2424794.dot")
