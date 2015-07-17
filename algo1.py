@@ -18,6 +18,44 @@ def slice(trace_benign, insn, arch=32):
 
     return rst
 
+def fetchMemoryError(trace_error, arch=32):
+    logger = logging.getLogger(__name__)
+
+    logger.info("Detecting memory error of %s", trace_error)
+
+    cmd = "cp_detect -{arch} {trace_error}".format(arch=arch, trace_error=trace_error)
+    logger.debug("Executing command: " + cmd)
+
+    ret = []
+    currentVal = None
+    with os.popen(cmd) as result:
+        rst = result.read()
+        logger.debugv("Result:\n%s", rst)
+
+        for line in rst.splitlines():
+            if line[:9] == "arbitrary":
+                if currentVal is not None:
+                    ret.append(currentVal)
+                currentVal = {}
+                continue
+
+            line = line.split(":", 1)
+
+            if line[0] == "\tbase memory reg":
+                currentVal["baseMemoryReg"] = line[1]
+            elif line[0] == '\tindex memory reg':
+                currentVal["indexMemoryReg"] = line[1]
+            elif line[0] == '\tvalue  reg':
+                currentVal["valueReg"] = line[1]
+            elif line[0] == "\tinsn":
+                insn, addr = line[1].split()
+                currentVal["insn"] = insn
+                currentVal["insnAddr"] = addr
+            else:
+                logger.warning("Unhandled cp_detect output: %s", line)
+        ret.append(currentVal)
+    return ret
+
 def run():
     logger = logging.getLogger(__name__)
     alignRst = (1106175, 37863)
@@ -32,11 +70,14 @@ def run():
     inputFolder = "align/test1/"
     trace_benign = inputFolder + "scalign-wuftpd-skiplib-6.bpt"
     modload_benign = inputFolder + "align-wuftpd-skiplib-6.modload"
-    error_benign = inputFolder + "scalign-err-wuftpd-skiplib-4.bpt"
-    error_modload = inputFolder + "align-err-wuftpd-skiplib-4.modload"
+    trace_error = inputFolder + "scalign-err-wuftpd-skiplib-4.bpt"
+    modload_error = inputFolder + "align-err-wuftpd-skiplib-4.modload"
 
     cp_detect_result = 1123206
 
+
+    memory_error_vertex = fetchMemoryError(trace_error)
+    exit()
 
     function_count = len(criticalDataRst.keys())
     for i, function_name in enumerate(criticalDataRst.keys(), 1):
