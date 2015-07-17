@@ -21,8 +21,8 @@ def getCorruptionTargets(src, target, graph):
     try:
         src_node = dfg.get_node(src)
     except KeyError:
-        logger.error("Source address not found in trace.")
-        raise Exception("Critical data insn is invalid.")
+        logger.warning("Source address %i not found in trace.", src)
+        return []
     que.append(src_node)
     result = []
     while que:
