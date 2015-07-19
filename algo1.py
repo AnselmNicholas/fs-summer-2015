@@ -4,6 +4,8 @@ import enhanceLogging
 from detCorruptTarget import findCorruptionTarget
 from align import align
 import argparse
+import json
+import subprocess
 
 def slice(trace_benign, insn, arch=32):
     """Perform the slice and return the result as a string.
@@ -18,7 +20,17 @@ def slice(trace_benign, insn, arch=32):
     cmd = "binslicer-{arch} {trace_benign} {insn}:0".format(arch=arch, trace_benign=trace_benign, insn=insn)
     logger.debug("Executing command: " + cmd)
 
-    with os.popen(cmd) as result:
+    p = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
+    
+    stdout = p.stdout
+    stderr = p.stderr
+    with stdout as result:
+        with stderr as err:
+            errTxt = err.read()
+            if errTxt:
+                logger.error("Error in command:\n" + errTxt)
+                raise Exception("Error executing command: " + cmd)
+
         rst = result.read()
         logger.debugv("Result:\n%s", rst)
 
@@ -42,7 +54,19 @@ def fetchMemoryError(trace_error, arch=32):
 
     ret = []
     currentVal = None
-    with os.popen(cmd) as result:
+#     stdout, stdin, stderr = os.popen3(cmd)
+    
+    p = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
+    
+    stdout = p.stdout
+    stderr = p.stderr
+    with stdout as result:
+        with stderr as err:
+            errTxt = err.read()
+            if errTxt:
+                logger.error("Error in command:\n" + errTxt)
+                raise Exception("Error executing command: " + cmd)
+
         rst = result.read()
         logger.debugv("Result:\n%s", rst)
 
@@ -72,25 +96,21 @@ def fetchMemoryError(trace_error, arch=32):
 
     return ret
 
-def run():
+def runAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload_error):
     logger = logging.getLogger(__name__)
-    alignRst = (1106175, 37863)
-    criticalDataRst = {'seteuid': {
-        '1000873': [['1000872', 'bfffdb80']],
-        '1142250': [['1142249', 'bfffdf80']],
-        '2469374': [['2469373', 'bfffdff0']],
-        '2424795': [['2424794', 'bfffdf80']]
-        }
-    }
-
-    inputFolder = "align/test1/"
-    trace_benign = inputFolder + "scalign-wuftpd-skiplib-6.bpt"
-    modload_benign = inputFolder + "align-wuftpd-skiplib-6.modload"
-    trace_error = inputFolder + "scalign-err-wuftpd-skiplib-4.bpt"
-    modload_error = inputFolder + "align-err-wuftpd-skiplib-4.modload"
-
-    cp_detect_result = 1123206
-
+#     criticalDataRst = {'seteuid': {
+#         '1000873': [['1000872', 'bfffdb80']],
+#         '1142250': [['1142249', 'bfffdf80']],
+#         '2469374': [['2469373', 'bfffdff0']],
+#         '2424795': [['2424794', 'bfffdf80']]
+#         }
+#     }
+#
+#     inputFolder = "align/test1/"
+#     trace_benign = inputFolder + "scalign-wuftpd-skiplib-6.bpt"
+#     modload_benign = inputFolder + "align-wuftpd-skiplib-6.modload"
+#     trace_error = inputFolder + "scalign-err-wuftpd-skiplib-4.bpt"
+#     modload_error = inputFolder + "align-err-wuftpd-skiplib-4.modload"
 
     memory_error_vertex = fetchMemoryError(trace_error)
 
@@ -135,28 +155,43 @@ def run():
     os.unlink(ain_benign)
     os.unlink(ain_error)
 
+def run(criticalDataFile, trace_benign, modload_benign, trace_error, modload_error):
+    with open(criticalDataFile) as f:
+        criticalDataRst = json.load(f)
+
+        runAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload_error)
 
 def main():
     parser = argparse.ArgumentParser(description="")
-#     parser.add_argument("functions", help="File containing a list of functions and their argument count. Stored in the format <function name> <paramcnt> \\n")
-#     parser.add_argument("trace", help="Path to trace file (*.bpt).")
-#     parser.add_argument("binary", help="Path to binary file.")
-#     parser.add_argument('--gdb', dest='use_gdb', action='store_true', help="Use gdb instead of objdump")
+
+    parser.add_argument("critical_data", help="File containing critical data info.")
+
+    parser.add_argument("trace_benign", help="Path to trace file (*.bpt).")
+    parser.add_argument("modload_benign", help="Output of gentrace.")
+
+    parser.add_argument("trace_error", help="Path to trace file (*.bpt).")
+    parser.add_argument("modload_error", help="Output of gentrace.")
+
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
     args = parser.parse_args()
-#     if not os.path.exists(args.functions):
-#         parser.error("functions file do not exist");
-#     if not os.path.exists(args.trace):
-#         parser.error("trace file do not exist");
-#     if not os.path.exists(args.binary):
-#         parser.error("binary file do not exist");
+    if not os.path.exists(args.critical_data):
+        parser.error("critical_data file do not exist");
+    if not os.path.exists(args.trace_benign):
+        parser.error("trace file do not exist");
+    if not os.path.exists(args.modload_benign):
+        parser.error("modload file do not exist");
+    if not os.path.exists(args.trace_error):
+        parser.error("trace file do not exist");
+    if not os.path.exists(args.modload_error):
+        parser.error("modload file do not exist");
+
     if args.verbose == 0:logging.basicConfig(level=logging.WARNING)
     elif args.verbose == 1: logging.basicConfig(level=logging.INFO)
     elif args.verbose == 2: logging.basicConfig(level=logging.DEBUG)
     else : logging.basicConfig(level=enhanceLogging.DEBUG_LEVELV_NUM)
 
-    run()
+    run(args.critical_data, args.trace_benign, args.modload_benign, args.trace_error, args.modload_error)
 
 if __name__ == "__main__":
     main()
