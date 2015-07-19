@@ -94,7 +94,7 @@ def findInstructionIndex(insnList, insn):
 def findCallIndex(callretList, eipList, idx):
     logger = logging.getLogger(__name__)
     logger.info("Fetching call index for {0}".format(idx))
-    
+
     idx -= 1  # zero align index
 
     if callretList[idx] is not "retl": return idx + 1  # one align index
@@ -116,10 +116,10 @@ def findCallIndex(callretList, eipList, idx):
                 while not stack.pop() == eipList[index]:
                     count -= 1
                 count -= 1
-            except IndexError: # nothing else to pop. This means that no return for that call has been discovered.
+            except IndexError:  # nothing else to pop. This means that no return for that call has been discovered.
                 break
             # print "count--"
-            
+
     if count:
         raise Exception("Call count is not 0 but {0}.".format(count))
     return index + 1  # one align index
@@ -313,6 +313,19 @@ def genAIN(trace, bindir=""):
     logger.info("ain generated")
     return name
 
+def run(traceBenign, modloadBenign, traceError, modloadError, errorInsn, generateAin=True , writediffresult=False):
+    if generateAin:
+        nameAINBenign = genAIN(traceBenign, os.path.dirname(os.path.realpath(__file__)) + "/")
+        nameAINError = genAIN(traceError, os.path.dirname(os.path.realpath(__file__)) + "/")
+    else:
+        nameAINBenign = traceBenign
+        nameAINError = traceError
+    insn, functn = runAlign(nameAINBenign, modloadBenign, nameAINError, modloadError, errorInsn, writediffresult)
+    print insn, functn
+
+    if generateAin:
+        os.unlink(nameAINBenign)
+        os.unlink(nameAINError)
 
 def main():
     def check_errorInsn(value):
@@ -347,18 +360,8 @@ def main():
     if args.verbose == 1: logging.basicConfig(level=logging.INFO)
     if args.verbose > 1: logging.basicConfig(level=logging.DEBUG)
 
-    if args.generateAin:
-        nameAINBenign = genAIN(args.traceBenign, os.path.dirname(os.path.realpath(__file__)) + "/")
-        nameAINError = genAIN(args.traceError, os.path.dirname(os.path.realpath(__file__)) + "/")
-    else:
-        nameAINBenign = args.traceBenign
-        nameAINError = args.traceError
-    insn, functn = runAlign(nameAINBenign, args.modloadBenign, nameAINError, args.modloadError, args.errorInsn, args.writediffresult)
-    print insn, functn
-    
-    if args.generateAin:
-        os.unlink(nameAINBenign)
-        os.unlink(nameAINError)
+    run(args.traceBenign, args.modloadBenign, args.traceError, args.modloadError, args.errorInsn, args.generateAin, args.writediffresult)
+
 
 if __name__ == "__main__":
     main()
