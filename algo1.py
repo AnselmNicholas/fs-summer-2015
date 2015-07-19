@@ -2,11 +2,12 @@ import logging
 import os
 import enhanceLogging
 from detCorruptTarget import findCorruptionTarget
+from align import align
 import argparse
 
 def slice(trace_benign, insn, arch=32):
     """Perform the slice and return the result as a string.
-    
+
     Executes the following command
         binslicer-{arch} {trace_benign} {insn}:0
     """
@@ -25,10 +26,10 @@ def slice(trace_benign, insn, arch=32):
 
 def fetchMemoryError(trace_error, arch=32):
     """Run cp_detect and return result as a list of dict.
-    
+
     Executes the following command
         cp_detect -{arch} {trace_error}
-        
+
     Element in dict includes the following
         baseMemoryReg, indexMemoryReg, valueReg, insn, insnAddr
     """
@@ -62,13 +63,13 @@ def fetchMemoryError(trace_error, arch=32):
                 currentVal["valueReg"] = line[1]
             elif line[0] == "\tinsn":
                 insn, addr = line[1].split()
-                currentVal["insn"] = insn
+                currentVal["insn"] = int(insn)
                 currentVal["insnAddr"] = addr
             else:
                 logger.warning("Unhandled cp_detect output: %s", line)
-                
+
         ret.append(currentVal)
-        
+
     return ret
 
 def run():
@@ -92,23 +93,48 @@ def run():
 
 
     memory_error_vertex = fetchMemoryError(trace_error)
-    exit()
 
-    function_count = len(criticalDataRst.keys())
-    for i, function_name in enumerate(criticalDataRst.keys(), 1):
-        logger.info("Processing function %i/%i", i, function_count)
+    ain_benign = align.genAIN(trace_benign, os.path.dirname(os.path.realpath(__file__)) + "/align/")
+    ain_error = align.genAIN(trace_error, os.path.dirname(os.path.realpath(__file__)) + "/align/")
+    processed_align = []
 
-        function_call_count = len(criticalDataRst[function_name].keys())
-        for j, call in enumerate(criticalDataRst[function_name].keys(), 1):
-            logger.info("Processing %s call %i/%i", function_name , j, function_call_count)
+    slice_cache = {}
 
-            function_param_count = len(criticalDataRst[function_name][call])
-            for k, param in enumerate(criticalDataRst[function_name][call], 1):
-                logger.info("Processing parameter %i/%i", k, function_param_count)
+    memory_error_count = len(memory_error_vertex)
+    for h, memory_error_insn in enumerate(memory_error_vertex, 1):
+        logger.info("Processing memory error %i/%i", h, memory_error_count)
+        alignRst = align.runAlign(ain_benign, modload_benign, ain_error, modload_error, memory_error_insn["insn"])
 
-                insn, espValue = param
-                slicedDFG = slice(trace_benign, insn)
-                findCorruptionTarget.getCorruptionTargets(insn, alignRst[0], slicedDFG)
+        if alignRst in processed_align:
+            logger.info("Skipping - combination has already been processed")
+            continue
+        else:
+            processed_align.append(alignRst)
+
+        function_count = len(criticalDataRst.keys())
+        for i, function_name in enumerate(criticalDataRst.keys(), 1):
+            logger.info("Processing function %i/%i", i, function_count)
+
+            function_call_count = len(criticalDataRst[function_name].keys())
+            for j, call in enumerate(criticalDataRst[function_name].keys(), 1):
+                logger.info("Processing %s call %i/%i", function_name , j, function_call_count)
+
+                function_param_count = len(criticalDataRst[function_name][call])
+                for k, param in enumerate(criticalDataRst[function_name][call], 1):
+                    logger.info("Processing parameter %i/%i", k, function_param_count)
+
+                    insn, espValue = param
+                    slicedDFG = slice_cache.get((function_name, insn), None)
+
+                    if slicedDFG is None:
+                        slicedDFG = slice(trace_benign, insn)
+                        slice_cache[(function_name, insn)] = slicedDFG
+
+                    findCorruptionTarget.getCorruptionTargets(insn, alignRst[0], slicedDFG)
+
+    os.unlink(ain_benign)
+    os.unlink(ain_error)
+
 
 def main():
     parser = argparse.ArgumentParser(description="")
