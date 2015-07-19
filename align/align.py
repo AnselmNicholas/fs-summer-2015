@@ -9,8 +9,8 @@ def getFunctionNameCmd2(targetAddress, procFile, debug=False):
     """Print command to execute in console to fetch function name.
 
     Input:
-    targetAddress - address in the form of a hexadecimal string appended with 0x
-    procFile - output of gentrace
+        targetAddress - address in the form of a hexadecimal string appended with 0x
+        procFile - output of gentrace
     """
     try:
         targetAddress = int(targetAddress[2:], 16)
@@ -241,6 +241,20 @@ def align(r1, r2):
 
 
 def runAlign(infile1, mlfile1, infile2, mlfile2, targetinsn, writediffresult=False):
+    """
+    Align an instruction in trace 2 to the corresponding function in trace 1
+    
+    Input
+        infile1 - path to ain of trace 1
+        mlfile1 - path to modload of trace 1
+        infile2 - path to ain of trace 2
+        mlfile2 - path to modload of trace 2
+        targetinsn - int - insn of an instruction in the function to be aligned
+        
+    Output
+        instructionNo
+        functionNo
+    """
     logger = logging.getLogger(__name__)
 #     infile1 = "test1/scalign-wuftpd-skiplib-5.ain"
 #     mlfile1 = "test1/align-wuftpd-skiplib-5.modload"
@@ -298,6 +312,16 @@ def runAlign(infile1, mlfile1, infile2, mlfile2, targetinsn, writediffresult=Fal
     return instructionNo, functionNo
 
 def genAIN(trace, bindir=""):
+    """
+    Generate ain of trace
+    
+    Input:
+        trace - path to trace file
+        bindir - path to the directory containing bin
+    
+    Output:
+        path to ain file
+    """
     logger = logging.getLogger(__name__)
 
     handler, name = mkstemp()
@@ -321,11 +345,13 @@ def run(traceBenign, modloadBenign, traceError, modloadError, errorInsn, generat
         nameAINBenign = traceBenign
         nameAINError = traceError
     insn, functn = runAlign(nameAINBenign, modloadBenign, nameAINError, modloadError, errorInsn, writediffresult)
-    print insn, functn
+
 
     if generateAin:
         os.unlink(nameAINBenign)
         os.unlink(nameAINError)
+
+    return insn, functn
 
 def main():
     def check_errorInsn(value):
@@ -360,8 +386,8 @@ def main():
     if args.verbose == 1: logging.basicConfig(level=logging.INFO)
     if args.verbose > 1: logging.basicConfig(level=logging.DEBUG)
 
-    run(args.traceBenign, args.modloadBenign, args.traceError, args.modloadError, args.errorInsn, args.generateAin, args.writediffresult)
-
+    insn, functn = run(args.traceBenign, args.modloadBenign, args.traceError, args.modloadError, args.errorInsn, args.generateAin, args.writediffresult)
+    print insn, functn
 
 if __name__ == "__main__":
     main()
