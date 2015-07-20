@@ -20,8 +20,8 @@ def slice(trace_benign, insn, arch=32):
     cmd = "binslicer-{arch} {trace_benign} {insn}:0".format(arch=arch, trace_benign=trace_benign, insn=insn)
     logger.debug("Executing command: " + cmd)
 
-    p = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
-    
+    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+
     stdout = p.stdout
     stderr = p.stderr
     with stdout as result:
@@ -55,9 +55,9 @@ def fetchMemoryError(trace_error, arch=32):
     ret = []
     currentVal = None
 #     stdout, stdin, stderr = os.popen3(cmd)
-    
-    p = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
-    
+
+    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+
     stdout = p.stdout
     stderr = p.stderr
     with stdout as result:
@@ -112,7 +112,17 @@ def runAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload
 #     trace_error = inputFolder + "scalign-err-wuftpd-skiplib-4.bpt"
 #     modload_error = inputFolder + "align-err-wuftpd-skiplib-4.modload"
 
+
+    for i, function_name in enumerate(criticalDataRst.keys(), 1):
+        for j, call in enumerate(criticalDataRst[function_name].keys(), 1):
+            for k, param in enumerate(criticalDataRst[function_name][call], 1):
+                print "critical data detection: found {} {} {} @ {}".format(function_name, j, call, param)
+
+    exit()
+
     memory_error_vertex = fetchMemoryError(trace_error)
+    for i in memory_error_vertex:
+        print "cp_detection: found error @ {0}".format(i["insn"])
 
     ain_benign = align.genAIN(trace_benign, os.path.dirname(os.path.realpath(__file__)) + "/align/")
     ain_error = align.genAIN(trace_error, os.path.dirname(os.path.realpath(__file__)) + "/align/")
@@ -130,6 +140,7 @@ def runAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload
             continue
         else:
             processed_align.append(alignRst)
+            print "aligning: {0} aligned to {1}".format(memory_error_insn["insn"], alignRst)
 
         function_count = len(criticalDataRst.keys())
         for i, function_name in enumerate(criticalDataRst.keys(), 1):
@@ -150,7 +161,13 @@ def runAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload
                         slicedDFG = slice(trace_benign, insn)
                         slice_cache[(function_name, insn)] = slicedDFG
 
-                    findCorruptionTarget.getCorruptionTargets(insn, alignRst[0], slicedDFG)
+                    corruption_target = findCorruptionTarget.getCorruptionTargets(insn, alignRst[0], slicedDFG)
+
+                    if not corruption_target:
+                        print "single stitch candidates selection: {function_name} {call_no} {param_no}: faied to find".format(function_name=function_name, call_no=j, param_no=k)
+                    else:
+                        for l in corruption_target:
+                            print "single stitch candidates selection: {function_name} {call_no} {param_no}: {edge}".format(function_name=function_name, call_no=j, param_no=k, edge=l)
 
     os.unlink(ain_benign)
     os.unlink(ain_error)
@@ -164,7 +181,8 @@ def run(criticalDataFile, trace_benign, modload_benign, trace_error, modload_err
 def main():
     parser = argparse.ArgumentParser(description="")
 
-    parser.add_argument("critical_data", help="File containing critical data info.")
+#     parser.add_argument('-dct', '--detect-critical-data', nargs=1, help="Perform offline critical data detection.")
+    parser.add_argument("critical_data", help="File containing critical data info or funct.txt if -dct flag is used.")
 
     parser.add_argument("trace_benign", help="Path to trace file (*.bpt).")
     parser.add_argument("modload_benign", help="Output of gentrace.")

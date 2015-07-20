@@ -44,7 +44,7 @@ def getCorruptionTargets(src, target, graph):
 
             if p < target and target < c:
                 mem = parent_edge.attr["label"]
-                print "Possible edge", p, c, mem
+                logger.info("Possible edge: {} {} {}".format(p, c, mem))
 
                 result.append([p, c, mem])
                 continue
