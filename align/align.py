@@ -3,6 +3,7 @@ import misc
 import logging
 from tempfile import mkstemp
 import os
+import subprocess
 
 
 def getFunctionNameCmd2(targetAddress, procFile, debug=False):
@@ -330,7 +331,10 @@ def genAIN(trace, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/"):
     cmd = "{0}fetchAIN {1}".format(bindir, trace)
     logger.debug("Executing command: " + cmd)
 
-    with os.popen(cmd) as result:
+    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, close_fds=True)
+
+    stdout = p.stdout
+    with stdout as result:
         with open(name, "w") as f:
             f.writelines(result)
 

@@ -4,6 +4,7 @@ import logging
 import argparse
 import re
 import shlex
+import subprocess
 
 '''
 Use gdb to find address of function.
@@ -54,7 +55,17 @@ def fetchAddressFromGDB(functions, binary, source=""):
 
         cmd = "gdb --batch --command=" + name + " " + binary
         logger.info("Executing: [%s]", cmd)
-        with os.popen(cmd) as result:
+        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+    
+        stdout = p.stdout
+        stderr = p.stderr
+        with stdout as result:
+            with stderr as err:
+                errTxt = err.read()
+                if errTxt:
+                    logger.error("Error in command:\n" + errTxt)
+                    raise Exception("Error executing command: " + cmd)
+
             rst = result.read()
             logger.debug("Result:\n%s", rst)
 
@@ -103,7 +114,17 @@ def fetchAddressFromObjdump(functions, binary, source=""):
 
     cmd = "objdump -j.plt -d " + binary
     logger.info("Executing: [%s]", cmd)
-    with os.popen(cmd) as result:
+    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+
+    stdout = p.stdout
+    stderr = p.stderr
+    with stdout as result:
+        with stderr as err:
+            errTxt = err.read()
+            if errTxt:
+                logger.error("Error in command:\n" + errTxt)
+                raise Exception("Error executing command: " + cmd)
+
         rst = result.read()
         logger.debug("Result:\n%s", rst)
 
@@ -125,7 +146,17 @@ def fetchAddressFromObjdump(functions, binary, source=""):
 
     cmd = 'objdump -t ' + binary + ' | grep "g     F"'
     logger.info("Executing: [%s]", cmd)
-    with os.popen(cmd) as result:
+    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+
+    stdout = p.stdout
+    stderr = p.stderr
+    with stdout as result:
+        with stderr as err:
+            errTxt = err.read()
+            if errTxt:
+                logger.error("Error in command:\n" + errTxt)
+                raise Exception("Error executing command: " + cmd)
+
         rst = result.read()
         logger.debug("Result:\n%s", rst)
 
@@ -167,23 +198,31 @@ def getInstructionAddress(dstAddresses, trace_file, bindir=os.path.dirname(os.pa
 
     cmd = bindir + "fetchCallFromTrace " + trace_file
     logger.info("Executing: [%s]", cmd)
-    with os.popen(cmd) as result:
-        rst = result.read()
-        logger.debug("Result:\n%s", rst)
+    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,close_fds=True)
 
-        rst = rst.splitlines()
+    stdout = p.stdout
+    with stdout as result:
+        rst = result.read()        
+    if not rst:
+        logger.error("Error in command: "+cmd)
+        raise Exception("Error executing command: " + cmd)
+            
+        
+    logger.debug("Result:\n%s", rst)
 
-        for result in rst:
-            instrAddr, _, dstAddr, _, ctr = result.split()
-            logger.debug("Checking instruction %s with destination %s frameno %s", instrAddr, dstAddr, ctr)
+    rst = rst.splitlines()
 
-            if dstAddr in dstAddresses:
-                logger.info("%s is called at %s with frame no %s", dstAddr, instrAddr, ctr)
-                # ret.append({dstAddr:ctr})
-                try:
-                    ret[dstAddr].append(ctr)
-                except KeyError:
-                    ret[dstAddr] = [ctr]
+    for result in rst:
+        instrAddr, _, dstAddr, _, ctr = result.split()
+        logger.debug("Checking instruction %s with destination %s frameno %s", instrAddr, dstAddr, ctr)
+
+        if dstAddr in dstAddresses:
+            logger.info("%s is called at %s with frame no %s", dstAddr, instrAddr, ctr)
+            # ret.append({dstAddr:ctr})
+            try:
+                ret[dstAddr].append(ctr)
+            except KeyError:
+                ret[dstAddr] = [ctr]
 
     return ret;
 
@@ -201,7 +240,18 @@ def fetchParam(trace_file, frame, paramCnt, bindir=os.path.dirname(os.path.realp
 
     cmd = "{0}fetchParam {1} {2} {3}".format(bindir, trace_file, frame, paramCnt)
     logger.info("Executing: [%s]", cmd)
-    with os.popen(cmd) as result:
+    
+    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+
+    stdout = p.stdout
+    stderr = p.stderr
+    with stdout as result:
+        with stderr as err:
+            errTxt = err.read()
+            if errTxt:
+                logger.error("Error in command:\n" + errTxt)
+                raise Exception("Error executing command: " + cmd)
+
         rst = result.read()
 
     logger.debug("Result:\n%s", rst)

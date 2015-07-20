@@ -119,11 +119,12 @@ def runAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload
     for i, function_name in enumerate(criticalDataRst.keys(), 1):
         for j, call in enumerate(criticalDataRst[function_name].keys(), 1):
             for k, param in enumerate(criticalDataRst[function_name][call], 1):
-                print "critical data detection: found {} {} {} @ {}".format(function_name, j, call, param)
+                print "critical data detection: found {} {} {} @ {}".format(function_name, j, call, param)     
 
     memory_error_vertex = fetchMemoryError(trace_error)
     for i in memory_error_vertex:
         print "cp_detection: found error @ {0}".format(i["insn"])
+
 
     ain_benign = align.genAIN(trace_benign)
     ain_error = align.genAIN(trace_error)
