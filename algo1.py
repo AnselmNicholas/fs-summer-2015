@@ -3,6 +3,7 @@ import os
 import enhanceLogging
 from detCorruptTarget import findCorruptionTarget
 from align import align
+from criticalDataIdentify import critDataIdentify
 import argparse
 import json
 import subprocess
@@ -96,7 +97,7 @@ def fetchMemoryError(trace_error, arch=32):
 
     return ret
 
-def runAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload_error):
+def runAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload_error, identifyCriticalData=False, functions_file="", binary_file=""):
     logger = logging.getLogger(__name__)
 #     criticalDataRst = {'seteuid': {
 #         '1000873': [['1000872', 'bfffdb80']],
@@ -112,13 +113,13 @@ def runAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload
 #     trace_error = inputFolder + "scalign-err-wuftpd-skiplib-4.bpt"
 #     modload_error = inputFolder + "align-err-wuftpd-skiplib-4.modload"
 
+    if (identifyCriticalData):
+        criticalDataRst = critDataIdentify.run(functions_file, trace_benign, binary_file,bindir=os.path.dirname(os.path.realpath(__file__)) + "/criticalDataIdentify/")
 
     for i, function_name in enumerate(criticalDataRst.keys(), 1):
         for j, call in enumerate(criticalDataRst[function_name].keys(), 1):
             for k, param in enumerate(criticalDataRst[function_name][call], 1):
                 print "critical data detection: found {} {} {} @ {}".format(function_name, j, call, param)
-
-    exit()
 
     memory_error_vertex = fetchMemoryError(trace_error)
     for i in memory_error_vertex:
@@ -172,16 +173,18 @@ def runAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload
     os.unlink(ain_benign)
     os.unlink(ain_error)
 
-def run(criticalDataFile, trace_benign, modload_benign, trace_error, modload_error):
-    with open(criticalDataFile) as f:
-        criticalDataRst = json.load(f)
-
-        runAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload_error)
+def run(criticalDataFileOrFunctFile, trace_benign, modload_benign, trace_error, modload_error, binary_file=""):
+    if (binary_file):
+        runAlgo1("", trace_benign, modload_benign, trace_error, modload_error, identifyCriticalData=True, functions_file=criticalDataFileOrFunctFile, binary_file=binary_file)
+    else:
+        with open(criticalDataFileOrFunctFile) as f:
+            criticalDataRst = json.load(f)
+            runAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload_error)
 
 def main():
     parser = argparse.ArgumentParser(description="")
 
-#     parser.add_argument('-dct', '--detect-critical-data', nargs=1, help="Perform offline critical data detection.")
+    parser.add_argument('-dcd', '--detect-critical-data', nargs="?", dest="bin_file" , help="Perform offline critical data detection.")
     parser.add_argument("critical_data", help="File containing critical data info or funct.txt if -dct flag is used.")
 
     parser.add_argument("trace_benign", help="Path to trace file (*.bpt).")
@@ -209,7 +212,7 @@ def main():
     elif args.verbose == 2: logging.basicConfig(level=logging.DEBUG)
     else : logging.basicConfig(level=enhanceLogging.DEBUG_LEVELV_NUM)
 
-    run(args.critical_data, args.trace_benign, args.modload_benign, args.trace_error, args.modload_error)
+    run(args.critical_data, args.trace_benign, args.modload_benign, args.trace_error, args.modload_error, binary_file=args.bin_file)
 
 if __name__ == "__main__":
     main()
