@@ -243,14 +243,14 @@ def align(r1, r2):
 def runAlign(infile1, mlfile1, infile2, mlfile2, targetinsn, writediffresult=False):
     """
     Align an instruction in trace 2 to the corresponding function in trace 1
-    
+
     Input
         infile1 - path to ain of trace 1
         mlfile1 - path to modload of trace 1
         infile2 - path to ain of trace 2
         mlfile2 - path to modload of trace 2
         targetinsn - int - insn of an instruction in the function to be aligned
-        
+
     Output
         instructionNo
         functionNo
@@ -311,14 +311,14 @@ def runAlign(infile1, mlfile1, infile2, mlfile2, targetinsn, writediffresult=Fal
     logger.info("Input insn was mapped to insn {} funct {}".format(instructionNo, functionNo))
     return instructionNo, functionNo
 
-def genAIN(trace, bindir=""):
+def genAIN(trace, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/"):
     """
     Generate ain of trace
-    
+
     Input:
         trace - path to trace file
         bindir - path to the directory containing bin
-    
+
     Output:
         path to ain file
     """
@@ -327,7 +327,7 @@ def genAIN(trace, bindir=""):
     handler, name = mkstemp()
     logger.info("Temp ain file created at " + name)
 
-    cmd = "{0}bin/fetchAIN {1}".format(bindir, trace)
+    cmd = "{0}fetchAIN {1}".format(bindir, trace)
     logger.debug("Executing command: " + cmd)
 
     with os.popen(cmd) as result:
@@ -339,8 +339,8 @@ def genAIN(trace, bindir=""):
 
 def run(traceBenign, modloadBenign, traceError, modloadError, errorInsn, generateAin=True , writediffresult=False):
     if generateAin:
-        nameAINBenign = genAIN(traceBenign, os.path.dirname(os.path.realpath(__file__)) + "/")
-        nameAINError = genAIN(traceError, os.path.dirname(os.path.realpath(__file__)) + "/")
+        nameAINBenign = genAIN(traceBenign)
+        nameAINError = genAIN(traceError)
     else:
         nameAINBenign = traceBenign
         nameAINError = traceError

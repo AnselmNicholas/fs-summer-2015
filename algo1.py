@@ -114,7 +114,7 @@ def runAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload
 #     modload_error = inputFolder + "align-err-wuftpd-skiplib-4.modload"
 
     if (identifyCriticalData):
-        criticalDataRst = critDataIdentify.run(functions_file, trace_benign, binary_file,bindir=os.path.dirname(os.path.realpath(__file__)) + "/criticalDataIdentify/")
+        criticalDataRst = critDataIdentify.run(functions_file, trace_benign, binary_file)
 
     for i, function_name in enumerate(criticalDataRst.keys(), 1):
         for j, call in enumerate(criticalDataRst[function_name].keys(), 1):
@@ -125,8 +125,8 @@ def runAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload
     for i in memory_error_vertex:
         print "cp_detection: found error @ {0}".format(i["insn"])
 
-    ain_benign = align.genAIN(trace_benign, os.path.dirname(os.path.realpath(__file__)) + "/align/")
-    ain_error = align.genAIN(trace_error, os.path.dirname(os.path.realpath(__file__)) + "/align/")
+    ain_benign = align.genAIN(trace_benign)
+    ain_error = align.genAIN(trace_error)
     processed_align = []
 
     slice_cache = {}

@@ -160,12 +160,12 @@ Input:
 Output:
     named dictionary of {destination address:[frame nos]}
 '''
-def getInstructionAddress(dstAddresses, trace_file, bindir=""):
+def getInstructionAddress(dstAddresses, trace_file, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/"):
     logger = logging.getLogger(__name__)
 
     ret = {};
 
-    cmd = bindir + "bin/fetchCallFromTrace " + trace_file
+    cmd = bindir + "fetchCallFromTrace " + trace_file
     logger.info("Executing: [%s]", cmd)
     with os.popen(cmd) as result:
         rst = result.read()
@@ -196,10 +196,10 @@ Input:
 Ouput:
     list of frameno, first memory address pair -> [[123,ff123],[456,ff456]]
 '''
-def fetchParam(trace_file, frame, paramCnt, bindir=""):
+def fetchParam(trace_file, frame, paramCnt, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/"):
     logger = logging.getLogger(__name__)
 
-    cmd = "{0}bin/fetchParam {1} {2} {3}".format(bindir, trace_file, frame, paramCnt)
+    cmd = "{0}fetchParam {1} {2} {3}".format(bindir, trace_file, frame, paramCnt)
     logger.info("Executing: [%s]", cmd)
     with os.popen(cmd) as result:
         rst = result.read()
@@ -256,7 +256,7 @@ Output:
      }
 
 '''
-def run(functions_file, trace_file, binary_file, use_gdb=False, bindir=""):
+def run(functions_file, trace_file, binary_file, use_gdb=False):
     logger = logging.getLogger(__name__)
 
     logger.info("Reading input file %s", functions_file)
@@ -286,7 +286,7 @@ def run(functions_file, trace_file, binary_file, use_gdb=False, bindir=""):
 
     logger.info("Output for fetchAddress: %s", dstAddresses)
 
-    addrFrameMap = getInstructionAddress(dstAddresses.keys(), trace_file, bindir=bindir)
+    addrFrameMap = getInstructionAddress(dstAddresses.keys(), trace_file)
     logger.info("Output for getInstructionAddress: %s", addrFrameMap)
 
     # frameParamCntMap = [[frame, functions[dstAddresses[address]]] for address in addrFrameMap.keys() for frame in addrFrameMap[address]]
@@ -298,7 +298,7 @@ def run(functions_file, trace_file, binary_file, use_gdb=False, bindir=""):
     for address in addrFrameMap.keys():
         for frame in addrFrameMap[address]:
             logger.info("Function: {0}, Frame: {1}".format(dstAddresses[address], frame))
-            firstMemoryFrameNo = fetchParam(trace_file, frame, functions[dstAddresses[address]], bindir=bindir)
+            firstMemoryFrameNo = fetchParam(trace_file, frame, functions[dstAddresses[address]])
             ret.setdefault(dstAddresses[address], {})[frame] = firstMemoryFrameNo
             logger.info("Output for fetchParam: %s", firstMemoryFrameNo)
 
