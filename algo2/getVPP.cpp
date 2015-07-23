@@ -224,12 +224,27 @@ void print_all(const char *f, uint64_t frameNo) {
 
 	std::string reg = getBaseRegister(*cur_frame);
 
-	if (reg.compare(0,5,"R_ESP")==0 or reg.length() == 0){
+	if (reg.compare(0, 5, "R_ESP") == 0) {
+		std::cout << "ESP " << frameNo << std::endl;
+		return;
+	}
+//	if (reg.compare(0, 5, "R_EBP") == 0) {
+//		std::cout << "EBP " << frameNo << std::endl;
+//		return;
+//	}
+
+	if (reg.length() == 0) {
 		std::cout << "err " << frameNo << std::endl;
 		return;
 	}
 
 //	std::cout << reg << std::endl;
+
+	bool regIsESP = false;
+	if (reg.compare(0, 5, "R_ESP") == 0) {
+
+		regIsESP = true;
+	}
 
 	while (ctr > 0) {
 		ctr--;
@@ -240,8 +255,22 @@ void print_all(const char *f, uint64_t frameNo) {
 		//print_std_frame(*cur_frame);
 
 		if (hasRegisterInPost(*cur_frame, reg)) {
-			std::cout << ctr << " " << std::hex << fetchFirstReadMemoryLocation(cur_frame->std_frame().operand_pre_list()) << std::endl;
-			return;
+
+			// fix for leavel
+			if (regIsESP && ((int) cur_frame->std_frame().rawbytes().at(0) & 0xff) == 0xc9) {
+				//std::cout <<ctr<<::std::endl;
+				continue;
+			}
+
+			uint64_t addr = fetchFirstReadMemoryLocation(cur_frame->std_frame().operand_pre_list());
+
+			if (addr != ULONG_MAX) {
+
+				std::cout << ctr << " " << std::hex << addr << std::endl;
+				return;
+
+			}
+
 		}
 
 	}
