@@ -113,7 +113,7 @@ def getVPP(trace, insn, bindir=os.path.dirname(os.path.realpath(__file__)) + "/b
 
     vppRst = rst.split(" ", 1)
 
-    if vppRst == "err":
+    if vppRst[0] == "err":
         logger.error("Unknown return: " + rst)
         raise Exception("Unknown return: " + rst)
     return vppRst
@@ -127,6 +127,7 @@ def runAlgo2():
     error_modload = "inpt/align-err-wuftpd-skiplib-5.bpt"
 
     tdtrace = benign_trace
+    sdtrace = benign_trace
 
     tdslice = "inpt/scalign-wuftpd-skiplib-7-1787632.dot"
     sdslice = "inpt/0-slice-1787598.dot"
@@ -140,7 +141,7 @@ def runAlgo2():
 
     tdgraph = tdslice
     sdgraph = sdslice
-    src = vT
+
     memoryErrorPt = alignrst[0]
 
 
@@ -149,6 +150,8 @@ def runAlgo2():
     SDFlow = pgv.AGraph(sdslice)
     TDFlow = pgv.AGraph(tdslice)
 
+    print "Algo 2A"
+    src = vT
     visited = {}
     que = collections.deque()
     try:
@@ -194,7 +197,59 @@ def runAlgo2():
 
                 print "VPP = {}, VP = {},  VS = {} {}".format(vpp, parent_edge.attr["label"], vs, vs.attr["label"])
 
-            #result.append([p, c, mem])
+    print "Algo 2B"
+    src = vS
+    visited = {}
+    que = collections.deque()
+    try:
+        src_node = SDFlow.get_node(src)
+    except KeyError:
+        logger.warning("Source address %i not found in trace.", src)
+        return []
+
+    que.append(src_node)
+    result = []
+    while que:
+        child = que.pop()
+
+        if visited.get(child, False):
+            continue
+
+        visited[child] = True
+        c = int(child.name)
+
+        for parent_edge in SDFlow.in_edges_iter(child):
+            parent = parent_edge[0]
+            que.append(parent)
+
+    #         if parent == child:
+    #             continue
+
+            mem = parent_edge.attr["label"]
+            if isRegister(mem): continue  # 15
+
+            p = int(parent.name)
+            if p < memoryErrorPt :  continue  # 16
+
+            if not isVPUsedToWriteV(sdtrace, c): continue  # 18
+
+            vpp = getVPP(tdtrace, c)
+            if vpp[0] in ["ESP", "EBP"]: continue  # Unable to determine vpp
+
+            logger.info("Possible edge: {} {} {}".format(p, c, mem))
+#
+            for vt in TDFlow.edges_iter():
+                logger.debug("proc TDFlow edge {} {}".format(vt, vt.attr["label"]))
+                if isRegister(vt.attr["label"]): continue
+
+                vt_time = int(vt[0])
+                vprime_time = int(vt[1])
+                if not (vt_time < c and c < vprime_time): continue
+
+                print "VPP = {}, VP = {},  VT = {} {}".format(vpp, parent_edge.attr["label"], vt, vt.attr["label"])
+
+
+            # result.append([p, c, mem])
                 # continue
 def main():
     parser = argparse.ArgumentParser(description="")
