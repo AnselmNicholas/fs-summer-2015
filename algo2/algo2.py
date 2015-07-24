@@ -118,26 +118,27 @@ def getVPP(trace, insn, bindir=os.path.dirname(os.path.realpath(__file__)) + "/b
         raise Exception("Unknown return: " + rst)
     return vppRst
 
-def runAlgo2():
+def runAlgo2(benign_trace, tdslice, sdslice, vT, vS, errorInsn):
+# def runAlgo2():
     logger = logging.getLogger(__name__)
 
     # Begin input args
-    benign_trace = "inpt/scalign-wuftpd-skiplib-7.bpt"
-    benign_modload = "inpt/align-wuftpd-skiplib-7.bpt"
-    error_trace = "inpt/scalign-err-wuftpd-skiplib-5.bpt"
-    error_modload = "inpt/align-err-wuftpd-skiplib-5.bpt"
-
-
-
-    tdslice = "inpt/scalign-wuftpd-skiplib-7-1787632.dot"
-    sdslice = "inpt/0-slice-1787598.dot"
-
-    vT = 1787632
-    vS = 1787598
-
-
-    cp = 1123226
-    alignrst = (1106195, 37863)  # (insn, functno)
+#     benign_trace = "inpt/scalign-wuftpd-skiplib-7.bpt"
+#     benign_modload = "inpt/align-wuftpd-skiplib-7.bpt"
+#     error_trace = "inpt/scalign-err-wuftpd-skiplib-5.bpt"
+#     error_modload = "inpt/align-err-wuftpd-skiplib-5.bpt"
+# 
+# 
+# 
+#     tdslice = "inpt/scalign-wuftpd-skiplib-7-1787632.dot"
+#     sdslice = "inpt/0-slice-1787598.dot"
+# 
+#     vT = 1787632
+#     vS = 1787598
+# 
+# 
+#     cp = 1123226
+#     alignrst = (1106195, 37863)  # (insn, functno) result of align
 
 
     # End of inpt args
@@ -150,7 +151,8 @@ def runAlgo2():
 
     # memoryErrorPt = alignrst[0]
 
-    I = [alignrst[0]]
+#     I = [alignrst[0]]
+    I = [errorInsn]
 
 
     SDFlow = pgv.AGraph(sdslice)
@@ -258,12 +260,23 @@ def runAlgo2():
             # result.append([p, c, mem])
                 # continue
 def main():
+
+    def check_errorInsn(value):
+        ivalue = int(value)
+        if ivalue < 0:
+            raise argparse.ArgumentTypeError("%s is an invalid positive int value" % value)
+        return ivalue
     parser = argparse.ArgumentParser(description="")
 
 #     parser.add_argument('-dcd', '--detect-critical-data', nargs="?", dest="bin_file" , help="Perform offline critical data detection.")
 #     parser.add_argument("critical_data", help="File containing critical data info or funct.txt if -dct flag is used.")
 #
-#     parser.add_argument("trace_benign", help="Path to trace file (*.bpt).")
+    parser.add_argument("benign_trace", help="Path to trace file (*.bpt).")
+    parser.add_argument("tdslice", help="Path to slice file (*.dot).")
+    parser.add_argument("sdslice", help="Path to slice file (*.dot).")
+    parser.add_argument("vT", type=check_errorInsn, help="Instruction no vT")
+    parser.add_argument("vS", type=check_errorInsn, help="Instruction no vS")
+    parser.add_argument("errorInsn", type=check_errorInsn, help="Instruction no of the memory error")
 #     parser.add_argument("modload_benign", help="Output of gentrace.")
 #
 #     parser.add_argument("trace_error", help="Path to trace file (*.bpt).")
@@ -272,8 +285,12 @@ def main():
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
     args = parser.parse_args()
-#     if not os.path.exists(args.critical_data):
-#         parser.error("critical_data file do not exist");
+    if not os.path.exists(args.benign_trace):
+        parser.error("benign_trace do not exist");
+    if not os.path.exists(args.tdslice):
+        parser.error("tdslice do not exist");
+    if not os.path.exists(args.sdslice):
+        parser.error("sdslice do not exist");
 #     if not os.path.exists(args.trace_benign):
 #         parser.error("trace file do not exist");
 #     if not os.path.exists(args.modload_benign):
@@ -289,7 +306,8 @@ def main():
 #     else : logging.basicConfig(level=enhanceLogging.DEBUG_LEVELV_NUM)
 
 #     run(args.critical_data, args.trace_benign, args.modload_benign, args.trace_error, args.modload_error, binary_file=args.bin_file)
-    runAlgo2()
+    runAlgo2(args.benign_trace, args.tdslice, args.sdslice, args.vT, args.vS, args.errorInsn)
+#     runAlgo2()
 
 if __name__ == "__main__":
     main()
