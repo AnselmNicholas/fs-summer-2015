@@ -121,13 +121,13 @@ def getVPP(trace, insn, bindir=os.path.dirname(os.path.realpath(__file__)) + "/b
 def runAlgo2():
     logger = logging.getLogger(__name__)
 
+    # Begin input args
     benign_trace = "inpt/scalign-wuftpd-skiplib-7.bpt"
     benign_modload = "inpt/align-wuftpd-skiplib-7.bpt"
     error_trace = "inpt/scalign-err-wuftpd-skiplib-5.bpt"
     error_modload = "inpt/align-err-wuftpd-skiplib-5.bpt"
 
-    tdtrace = benign_trace
-    sdtrace = benign_trace
+
 
     tdslice = "inpt/scalign-wuftpd-skiplib-7-1787632.dot"
     sdslice = "inpt/0-slice-1787598.dot"
@@ -137,14 +137,20 @@ def runAlgo2():
 
 
     cp = 1123226
-    alignrst = (1106195, 37863)
+    alignrst = (1106195, 37863)  # (insn, functno)
+
+
+    # End of inpt args
+
+    tdtrace = benign_trace
+    sdtrace = benign_trace
 
     tdgraph = tdslice
     sdgraph = sdslice
 
-    memoryErrorPt = alignrst[0]
+    # memoryErrorPt = alignrst[0]
 
-
+    I = [alignrst[0]]
 
 
     SDFlow = pgv.AGraph(sdslice)
@@ -182,7 +188,7 @@ def runAlgo2():
             if isRegister(mem): continue  # 7
 
             p = int(parent.name)
-            if memoryErrorPt > c:  continue  # 8
+            if I[0] > c:  continue  # 8
 
             if isVPUsedToWriteV(tdtrace, c): continue  # 10
 
@@ -229,7 +235,7 @@ def runAlgo2():
             if isRegister(mem): continue  # 15
 
             p = int(parent.name)
-            if p < memoryErrorPt :  continue  # 16
+            if p < min(I) :  continue  # 16
 
             if not isVPUsedToWriteV(sdtrace, c): continue  # 18
 
