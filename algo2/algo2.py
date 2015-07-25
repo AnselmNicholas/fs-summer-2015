@@ -118,9 +118,9 @@ def getVPP(trace, insn, bindir=os.path.dirname(os.path.realpath(__file__)) + "/b
         raise Exception("Unknown return: " + rst)
     return vppRst
 
-def getEdges(graph,src,):
+def getEdges(graph, src):
     logger = logging.getLogger(__name__)
-    #src = vS
+    # src = vS
     visited = {}
     que = collections.deque()
     try:
@@ -141,19 +141,27 @@ def getEdges(graph,src,):
         visited[child] = True
         c = int(child.name)
 
-        for parent_edge in graph.in_edges_iter(child):
-            parent = parent_edge[0]
-            que.append(parent)
 
-    #         if parent == child:
-    #             continue
-            
-            yield parent_edge
-#             mem = parent_edge.attr["label"]
-#             if isRegister(mem): continue  # 15
-# 
-#             p = int(parent.name)
-#             if p < min(I) :  continue  # 16
+        edges = {}
+        for parent_edge in graph.in_edges_iter(child):
+            parentInsn = parent_edge[0]
+            if parentInsn == parent_edge[1]: continue # Skip the last vtx pointing to itself
+
+            edgesToParent = edges.get(parentInsn, None)
+            if edgesToParent is None:
+                que.append(parentInsn)
+                edgesToParent = {}
+                edges[parentInsn] = edgesToParent
+
+            edgesToParent[parent_edge.attr["label"]] = parent_edge
+
+            # yield parent_e
+
+        for parent in edges.keys():
+            # print edges[parent].keys()
+            addr = min(edges[parent].keys())
+            # for addr in edges[parent].keys():
+            yield edges[parent][addr]
 
 
 
@@ -166,16 +174,16 @@ def runAlgo2(benign_trace, tdslice, sdslice, vT, vS, errorInsn):
 #     benign_modload = "inpt/align-wuftpd-skiplib-7.bpt"
 #     error_trace = "inpt/scalign-err-wuftpd-skiplib-5.bpt"
 #     error_modload = "inpt/align-err-wuftpd-skiplib-5.bpt"
-# 
-# 
-# 
+#
+#
+#
 #     tdslice = "inpt/scalign-wuftpd-skiplib-7-1787632.dot"
 #     sdslice = "inpt/0-slice-1787598.dot"
-# 
+#
 #     vT = 1787632
 #     vS = 1787598
-# 
-# 
+#
+#
 #     cp = 1123226
 #     alignrst = (1106195, 37863)  # (insn, functno) result of align
 
@@ -198,28 +206,27 @@ def runAlgo2(benign_trace, tdslice, sdslice, vT, vS, errorInsn):
     TDFlow = pgv.AGraph(tdslice)
 
     print "Algo 2A"
-    
-    
     for V in getEdges(TDFlow, vT):
         p = int(V[0])
         c = int(V[1])
-    
+
         mem = V.attr["label"]
         if isRegister(mem): continue  # 7
-        
+
         if I[0] > c:  continue  # 8
-        
+
         if isVPUsedToWriteV(tdtrace, c): continue  # 10
-        
+
         vpp = getVPP(tdtrace, c)
-        
+        if vpp[0] in ["ESP", "EBP"]: continue  # Unable to determine vpp
+
         logger.info("Possible edge: {} {} {}".format(p, c, mem))
-        
+
         for vs in getEdges(SDFlow, vS):
             logger.debug("proc SDFlow edge {} {}".format(vs, vs.attr["label"]))
             if isRegister(vs.attr["label"]): continue
             if not isAliveAt(tdtrace, int(vs[0]), c, vs.attr["label"]): continue
-        
+
             print "VPP = {}, VP = {},  VS = {} {}".format(vpp, V.attr["label"], vs, vs.attr["label"])
 
     print "Algo 2B"
@@ -239,18 +246,18 @@ def runAlgo2(benign_trace, tdslice, sdslice, vT, vS, errorInsn):
 
         logger.info("Possible edge: {} {} {}".format(p, c, mem))
 #
-        #for vt in TDFlow.edges_iter():
+        # for vt in TDFlow.edges_iter():
         for vt in getEdges(TDFlow, vT):
             logger.debug("proc TDFlow edge {} {}".format(vt, vt.attr["label"]))
             if isRegister(vt.attr["label"]): continue
 
             vt_time = int(vt[0])
             vprime_time = int(vt[1])
+            logger.debug("{} < {} < {} : {}".format(vt_time, c, vprime_time, vt_time < c and c < vprime_time))
             if not (vt_time < c and c < vprime_time): continue
 
             print "VPP = {}, VP = {},  VT = {} {}".format(vpp, V.attr["label"], vt, vt.attr["label"])
-            # result.append([p, c, mem])
-                # continue
+
 def main():
 
     def check_errorInsn(value):
