@@ -118,6 +118,45 @@ def getVPP(trace, insn, bindir=os.path.dirname(os.path.realpath(__file__)) + "/b
         raise Exception("Unknown return: " + rst)
     return vppRst
 
+def getEdges(graph,src,):
+    logger = logging.getLogger(__name__)
+    #src = vS
+    visited = {}
+    que = collections.deque()
+    try:
+        src_node = graph.get_node(src)
+    except KeyError:
+        logger.error("Source address %i not found in trace.", src)
+        raise Exception("Source address %i not found in trace.", src)
+
+
+    que.append(src_node)
+    result = []
+    while que:
+        child = que.pop()
+
+        if visited.get(child, False):
+            continue
+
+        visited[child] = True
+        c = int(child.name)
+
+        for parent_edge in graph.in_edges_iter(child):
+            parent = parent_edge[0]
+            que.append(parent)
+
+    #         if parent == child:
+    #             continue
+            
+            yield parent_edge
+#             mem = parent_edge.attr["label"]
+#             if isRegister(mem): continue  # 15
+# 
+#             p = int(parent.name)
+#             if p < min(I) :  continue  # 16
+
+
+
 def runAlgo2(benign_trace, tdslice, sdslice, vT, vS, errorInsn):
 # def runAlgo2():
     logger = logging.getLogger(__name__)
@@ -159,104 +198,57 @@ def runAlgo2(benign_trace, tdslice, sdslice, vT, vS, errorInsn):
     TDFlow = pgv.AGraph(tdslice)
 
     print "Algo 2A"
-    src = vT
-    visited = {}
-    que = collections.deque()
-    try:
-        src_node = TDFlow.get_node(src)
-    except KeyError:
-        logger.warning("Source address %i not found in trace.", src)
-        return []
-
-    que.append(src_node)
-    result = []
-    while que:
-        child = que.pop()
-
-        if visited.get(child, False):
-            continue
-
-        visited[child] = True
-        c = int(child.name)
-
-        for parent_edge in TDFlow.in_edges_iter(child):
-            parent = parent_edge[0]
-            que.append(parent)
-
-    #         if parent == child:
-    #             continue
-
-            mem = parent_edge.attr["label"]
-            if isRegister(mem): continue  # 7
-
-            p = int(parent.name)
-            if I[0] > c:  continue  # 8
-
-            if isVPUsedToWriteV(tdtrace, c): continue  # 10
-
-            vpp = getVPP(tdtrace, c)
-
-            logger.info("Possible edge: {} {} {}".format(p, c, mem))
-
-            for vs in SDFlow.edges_iter():
-                logger.debug("proc SDFlow edge {} {}".format(vs, vs.attr["label"]))
-                if isRegister(vs.attr["label"]): continue
-                if not isAliveAt(tdtrace, int(vs[0]), c, vs.attr["label"]): continue
-
-                print "VPP = {}, VP = {},  VS = {} {}".format(vpp, parent_edge.attr["label"], vs, vs.attr["label"])
+    
+    
+    for V in getEdges(TDFlow, vT):
+        p = int(V[0])
+        c = int(V[1])
+    
+        mem = V.attr["label"]
+        if isRegister(mem): continue  # 7
+        
+        if I[0] > c:  continue  # 8
+        
+        if isVPUsedToWriteV(tdtrace, c): continue  # 10
+        
+        vpp = getVPP(tdtrace, c)
+        
+        logger.info("Possible edge: {} {} {}".format(p, c, mem))
+        
+        for vs in getEdges(SDFlow, vS):
+            logger.debug("proc SDFlow edge {} {}".format(vs, vs.attr["label"]))
+            if isRegister(vs.attr["label"]): continue
+            if not isAliveAt(tdtrace, int(vs[0]), c, vs.attr["label"]): continue
+        
+            print "VPP = {}, VP = {},  VS = {} {}".format(vpp, V.attr["label"], vs, vs.attr["label"])
 
     print "Algo 2B"
-    src = vS
-    visited = {}
-    que = collections.deque()
-    try:
-        src_node = SDFlow.get_node(src)
-    except KeyError:
-        logger.warning("Source address %i not found in trace.", src)
-        return []
+    for V in getEdges(SDFlow, vS):
+        p = int(V[0])
+        c = int(V[1])
 
-    que.append(src_node)
-    result = []
-    while que:
-        child = que.pop()
+        mem = V.attr["label"]
+        if isRegister(mem): continue  # 15
 
-        if visited.get(child, False):
-            continue
+        if p < min(I) :  continue  # 16
 
-        visited[child] = True
-        c = int(child.name)
+        if not isVPUsedToWriteV(sdtrace, c): continue  # 18
 
-        for parent_edge in SDFlow.in_edges_iter(child):
-            parent = parent_edge[0]
-            que.append(parent)
+        vpp = getVPP(tdtrace, c)
+        if vpp[0] in ["ESP", "EBP"]: continue  # Unable to determine vpp
 
-    #         if parent == child:
-    #             continue
-
-            mem = parent_edge.attr["label"]
-            if isRegister(mem): continue  # 15
-
-            p = int(parent.name)
-            if p < min(I) :  continue  # 16
-
-            if not isVPUsedToWriteV(sdtrace, c): continue  # 18
-
-            vpp = getVPP(tdtrace, c)
-            if vpp[0] in ["ESP", "EBP"]: continue  # Unable to determine vpp
-
-            logger.info("Possible edge: {} {} {}".format(p, c, mem))
+        logger.info("Possible edge: {} {} {}".format(p, c, mem))
 #
-            for vt in TDFlow.edges_iter():
-                logger.debug("proc TDFlow edge {} {}".format(vt, vt.attr["label"]))
-                if isRegister(vt.attr["label"]): continue
+        #for vt in TDFlow.edges_iter():
+        for vt in getEdges(TDFlow, vT):
+            logger.debug("proc TDFlow edge {} {}".format(vt, vt.attr["label"]))
+            if isRegister(vt.attr["label"]): continue
 
-                vt_time = int(vt[0])
-                vprime_time = int(vt[1])
-                if not (vt_time < c and c < vprime_time): continue
+            vt_time = int(vt[0])
+            vprime_time = int(vt[1])
+            if not (vt_time < c and c < vprime_time): continue
 
-                print "VPP = {}, VP = {},  VT = {} {}".format(vpp, parent_edge.attr["label"], vt, vt.attr["label"])
-
-
+            print "VPP = {}, VP = {},  VT = {} {}".format(vpp, V.attr["label"], vt, vt.attr["label"])
             # result.append([p, c, mem])
                 # continue
 def main():
