@@ -80,7 +80,7 @@ def runAlgo1(src, target, tdslice):
 
 
 def run(criticalDataInsn, errorFunctionInsn, dfgSlice):
-    getCorruptionTargets(criticalDataInsn, errorFunctionInsn, dfgSlice)
+    runAlgo1(criticalDataInsn, errorFunctionInsn, dfgSlice)
 
 def main():
     def check_errorInsn(value):
