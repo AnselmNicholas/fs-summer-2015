@@ -97,7 +97,7 @@ def fetchMemoryError(trace_error, arch=32):
 
     return ret
 
-def runAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload_error, identifyCriticalData=False, functions_file="", binary_file=""):
+def execAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload_error, identifyCriticalData=False, functions_file="", binary_file=""):
     logger = logging.getLogger(__name__)
 #     criticalDataRst = {'seteuid': {
 #         '1000873': [['1000872', 'bfffdb80']],
@@ -163,7 +163,7 @@ def runAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload
                         slicedDFG = slice(trace_benign, insn)
                         slice_cache[(function_name, insn)] = slicedDFG
 
-                    corruption_target = findCorruptionTarget.getCorruptionTargets(insn, alignRst[0], slicedDFG)
+                    corruption_target = findCorruptionTarget.runAlgo1(insn, alignRst[0], slicedDFG)
 
                     if not corruption_target:
                         print "single stitch candidates selection: {function_name} {call_no} {param_no}: faied to find".format(function_name=function_name, call_no=j, param_no=k)
@@ -176,11 +176,11 @@ def runAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload
 
 def run(criticalDataFileOrFunctFile, trace_benign, modload_benign, trace_error, modload_error, binary_file=""):
     if (binary_file):
-        runAlgo1("", trace_benign, modload_benign, trace_error, modload_error, identifyCriticalData=True, functions_file=criticalDataFileOrFunctFile, binary_file=binary_file)
+        execAlgo1("", trace_benign, modload_benign, trace_error, modload_error, identifyCriticalData=True, functions_file=criticalDataFileOrFunctFile, binary_file=binary_file)
     else:
         with open(criticalDataFileOrFunctFile) as f:
             criticalDataRst = json.load(f)
-            runAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload_error)
+            execAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload_error)
 
 def main():
     parser = argparse.ArgumentParser(description="")
