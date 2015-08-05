@@ -8,35 +8,6 @@ import argparse
 import json
 import subprocess
 
-def slice(trace_benign, insn, arch=32):
-    """Perform the slice and return the result as a string.
-
-    Executes the following command
-        binslicer-{arch} {trace_benign} {insn}:0
-    """
-    logger = logging.getLogger(__name__)
-
-    logger.info("Slicing %s at %s", trace_benign, insn)
-
-    cmd = "binslicer-{arch} {trace_benign} {insn}:0".format(arch=arch, trace_benign=trace_benign, insn=insn)
-    logger.debug("Executing command: " + cmd)
-
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-
-    stdout = p.stdout
-    stderr = p.stderr
-    with stdout as result:
-        with stderr as err:
-            errTxt = err.read()
-            if errTxt:
-                logger.error("Error in command:\n" + errTxt)
-                raise Exception("Error executing command: " + cmd)
-
-        rst = result.read()
-        logger.debugv("Result:\n%s", rst)
-
-    return rst
-
 def fetchMemoryError(trace_error, arch=32):
     """Run cp_detect and return result as a list of dict.
 
@@ -130,8 +101,6 @@ def execAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modloa
     ain_error = align.genAIN(trace_error)
     processed_align = []
 
-    slice_cache = {}
-
     memory_error_count = len(memory_error_vertex)
     for h, memory_error_insn in enumerate(memory_error_vertex, 1):
         logger.info("Processing memory error %i/%i", h, memory_error_count)
@@ -157,13 +126,8 @@ def execAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modloa
                     logger.info("Processing parameter %i/%i", k, function_param_count)
 
                     insn, espValue = param
-                    slicedDFG = slice_cache.get((function_name, insn), None)
 
-                    if slicedDFG is None:
-                        slicedDFG = slice(trace_benign, insn)
-                        slice_cache[(function_name, insn)] = slicedDFG
-
-                    corruption_target = findCorruptionTarget.runAlgo1(insn, alignRst[0], slicedDFG)
+                    corruption_target = findCorruptionTarget.runAlgo1(insn, alignRst[0], trace_benign)
 
                     if not corruption_target:
                         print "single stitch candidates selection: {function_name} {call_no} {param_no}: faied to find".format(function_name=function_name, call_no=j, param_no=k)

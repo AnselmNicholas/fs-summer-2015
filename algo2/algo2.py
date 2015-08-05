@@ -126,8 +126,8 @@ def getEdges(graph, src):
     try:
         src_node = graph.get_node(src)
     except KeyError:
-        logger.error("Source address %i not found in trace.", src)
-        raise Exception("Source address %i not found in trace.", src)
+        logger.error("Source address %s not found in trace.", src)
+        raise Exception("Source address %s not found in trace.", src)
 
 
     que.append(src_node)
