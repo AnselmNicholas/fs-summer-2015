@@ -1,6 +1,6 @@
 import logging
 import os
-from align import align
+import align
 from criticalDataIdentify import critDataIdentify
 import argparse
 import json
