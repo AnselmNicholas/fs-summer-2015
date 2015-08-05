@@ -267,7 +267,7 @@ def runAlgo2(G, I, vS, vsi, vT, vti, cp):
             if not isAliveAt(tdtrace, int(vs[0]), c, vs.attr["label"]): continue
 
             print "VPP = {}, VP = {},  VS = {} {}".format(vpp, V.attr["label"], vs, vs.attr["label"])
-            corruption_target = runAlgo1(G, I, vpp)
+            corruption_target = runAlgo1(G, I, vpp[0])
             if not corruption_target:
                 print "single stitch candidates selection: faied to find"
             else:
@@ -303,7 +303,7 @@ def runAlgo2(G, I, vS, vsi, vT, vti, cp):
             if not (vt_time < c and c < vprime_time): continue
 
             print "VPP = {}, VP = {},  VT = {} {}".format(vpp, V.attr["label"], vt, vt.attr["label"])
-            corruption_target = runAlgo1(G, I, vpp)
+            corruption_target = runAlgo1(G, I, vpp[0])
             if not corruption_target:
                 print "single stitch candidates selection: faied to find"
             else:
