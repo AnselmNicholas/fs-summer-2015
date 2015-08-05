@@ -1,6 +1,6 @@
 LIBTRACE_DIR = ../criticalDataIdentify/libtrace
 PIN_DIR = ../criticalDataIdentify/pin
-BIN_DIR = bin
+BIN_DIR = ../bin
 CXX = g++
 CXXFLAGS = -I$(LIBTRACE_DIR)/src/cpp/pb  -I$(LIBTRACE_DIR)/src/common \
 	 -I$(LIBTRACE_DIR)/protobuf/src -I$(LIBTRACE_DIR)/src/cpp \
@@ -19,7 +19,7 @@ PINFLAGS = -Wl,--hash-style=sysv -L $(PIN_DIR)/extras/xed2-$(PINARCH)/lib/ -lxed
 
 .PHONY: all clean
 
-all: $(BIN_DIR)/fetchParam $(BIN_DIR)/isAliveAt $(BIN_DIR)/getVPP $(BIN_DIR)/isVPUsedToWriteV
+all: $(BIN_DIR)/isAliveAt $(BIN_DIR)/getVPP $(BIN_DIR)/isVPUsedToWriteV
 	
 $(BIN_DIR)/fetchCallFromTrace: fetchCallsFromTrace.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS)
@@ -38,4 +38,4 @@ $(BIN_DIR)/getVPP: getVPP.cpp
 	
 
 clean:
-	-rm -f $(BIN_DIR)/fetchParam $(BIN_DIR)/isAliveAt $(BIN_DIR)/getVPP $(BIN_DIR)/isVPUsedToWriteV
+	-rm -f $(BIN_DIR)/isAliveAt $(BIN_DIR)/getVPP $(BIN_DIR)/isVPUsedToWriteV

@@ -1,5 +1,6 @@
 import logging
 import subprocess
+import enhanceLogging
 
 slice_cache = {}
 print "Init slice cache"
@@ -11,7 +12,7 @@ def get(trace, insn, index=0):
 
     logger.debug("Fetching slice result of {insn}:{index} from {trace}".format(trace=trace, insn=insn, index=index))
     slicedDFG = slice_cache.get((trace, insn, index), None)
-    
+
     if slicedDFG is None:
         slicedDFG = slice(trace, insn, index)
         slice_cache[(trace, insn, index)] = slicedDFG
@@ -26,7 +27,7 @@ def slice(trace, insn, index=0, arch=32):
     """
     logger = logging.getLogger(__name__)
 
-    logger.info("Slicing %s at %s", trace, insn)
+    logger.info("Slicing %s at %s:%s", trace, insn, index)
 
     cmd = "binslicer-{arch} {trace} {insn}:{index}".format(arch=arch, trace=trace, insn=insn, index=index)
     logger.debug("Executing command: " + cmd)

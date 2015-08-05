@@ -8,6 +8,8 @@ import argparse
 import json
 import subprocess
 
+from stitchAlgo import runAlgo1
+
 def fetchMemoryError(trace_error, arch=32):
     """Run cp_detect and return result as a list of dict.
 
@@ -90,7 +92,7 @@ def execAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modloa
     for i, function_name in enumerate(criticalDataRst.keys(), 1):
         for j, call in enumerate(criticalDataRst[function_name].keys(), 1):
             for k, param in enumerate(criticalDataRst[function_name][call], 1):
-                print "critical data detection: found {} {} {} @ {}".format(function_name, j, call, param)     
+                print "critical data detection: found {} {} {} @ {}".format(function_name, j, call, param)
 
     memory_error_vertex = fetchMemoryError(trace_error)
     for i in memory_error_vertex:
@@ -127,7 +129,7 @@ def execAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modloa
 
                     insn, espValue = param
 
-                    corruption_target = findCorruptionTarget.runAlgo1(insn, alignRst[0], trace_benign)
+                    corruption_target = runAlgo1(trace_benign, [alignRst[0]], insn)
 
                     if not corruption_target:
                         print "single stitch candidates selection: {function_name} {call_no} {param_no}: faied to find".format(function_name=function_name, call_no=j, param_no=k)
