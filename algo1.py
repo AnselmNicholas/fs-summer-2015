@@ -1,14 +1,12 @@
 import logging
 import os
-import enhanceLogging
-from detCorruptTarget import findCorruptionTarget
 from align import align
 from criticalDataIdentify import critDataIdentify
 import argparse
 import json
 import subprocess
-
 from stitchAlgo import runAlgo1
+import enhanceLogging
 
 def fetchMemoryError(trace_error, arch=32):
     """Run cp_detect and return result as a list of dict.
