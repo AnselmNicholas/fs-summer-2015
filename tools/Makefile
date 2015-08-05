@@ -19,7 +19,7 @@ PINFLAGS = -Wl,--hash-style=sysv -L $(PIN_DIR)/extras/xed2-$(PINARCH)/lib/ -lxed
 
 .PHONY: all clean
 
-all: $(BIN_DIR)/isAliveAt $(BIN_DIR)/getVPP $(BIN_DIR)/isVPUsedToWriteV
+all: $(BIN_DIR)/isAliveAt $(BIN_DIR)/getVPP $(BIN_DIR)/isVPUsedToWriteV $(BIN_DIR)/fetchAIN
 	
 $(BIN_DIR)/fetchCallFromTrace: fetchCallsFromTrace.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS)
@@ -36,6 +36,8 @@ $(BIN_DIR)/isVPUsedToWriteV: isVPUsedToWriteV.cpp
 $(BIN_DIR)/getVPP: getVPP.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS) $(PINFLAGS) -DHHPIN32
 	
+$(BIN_DIR)/fetchAIN: fetchAIN.cpp
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDLIBS) $(PINFLAGS) -DHHPIN32
 
 clean:
-	-rm -f $(BIN_DIR)/isAliveAt $(BIN_DIR)/getVPP $(BIN_DIR)/isVPUsedToWriteV
+	-rm -f $(BIN_DIR)/isAliveAt $(BIN_DIR)/getVPP $(BIN_DIR)/isVPUsedToWriteV $(BIN_DIR)/fetchAIN
