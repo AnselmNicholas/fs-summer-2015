@@ -146,7 +146,7 @@ def getEdges(graph, src):
         edges = {}
         for parent_edge in graph.in_edges_iter(child):
             parentInsn = parent_edge[0]
-            if parentInsn == parent_edge[1]: continue  # Skip the last vtx pointing to itself
+            # if parentInsn == parent_edge[1]: continue  # Skip the last vtx pointing to itself
 
             edgesToParent = edges.get(parentInsn, None)
             if edgesToParent is None:
@@ -266,7 +266,7 @@ def runAlgo2(G, I, vS, vsi, vT, vti, cp):
             if isRegister(vs.attr["label"]): continue
             if not isAliveAt(tdtrace, int(vs[0]), c, vs.attr["label"]): continue
 
-            print "VPP = {}, VP = {},  VS = {} {}".format(vpp, V.attr["label"], vs, vs.attr["label"])
+            print "VPP = {}, VP = {}, VP.addr = {},  VS = {}, VS.addr = {}".format(vpp, V, V.attr["label"], vs, vs.attr["label"])
             corruption_target = runAlgo1(G, I, vpp[0])
             if not corruption_target:
                 print "single stitch candidates selection: faied to find"
@@ -302,7 +302,7 @@ def runAlgo2(G, I, vS, vsi, vT, vti, cp):
             logger.debug("{} < {} < {} : {}".format(vt_time, c, vprime_time, vt_time < c and c < vprime_time))
             if not (vt_time < c and c < vprime_time): continue
 
-            print "VPP = {}, VP = {},  VT = {} {}".format(vpp, V.attr["label"], vt, vt.attr["label"])
+            print "VPP = {}, VP = {}, VP.addr = {}, VT = {} VT.addr = {}".format(vpp, V, V.attr["label"], vt, vt.attr["label"])
             corruption_target = runAlgo1(G, I, vpp[0])
             if not corruption_target:
                 print "single stitch candidates selection: faied to find"
