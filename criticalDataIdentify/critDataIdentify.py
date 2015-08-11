@@ -358,7 +358,7 @@ def run(functions_file, trace_file, binary_file, use_gdb=False):
 def main():
     parser = argparse.ArgumentParser(description="Identify critical data from trace file")
     parser.add_argument("functions", help="File containing a list of functions and their argument count. Stored in the format <function name> <paramcnt> \\n")
-    parser.add_argument("trace", help="Path to trace file (*.bpt).")
+    parser.add_argument("trace", help="Path to benign trace file (*.bpt).")
     parser.add_argument("binary", help="Path to binary file.")
     parser.add_argument('--gdb', dest='use_gdb', action='store_true', help="Use gdb instead of objdump")
     parser.add_argument('-v', '--verbose', action='count', default=0)
