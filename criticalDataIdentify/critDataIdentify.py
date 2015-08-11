@@ -5,6 +5,7 @@ import argparse
 import re
 import shlex
 import subprocess
+import enhanceLogging
 
 '''
 Use gdb to find address of function.
@@ -67,7 +68,7 @@ def fetchAddressFromGDB(functions, binary, source=""):
                     raise Exception("Error executing command: " + cmd)
 
             rst = result.read()
-            logger.debug("Result:\n%s", rst)
+            logger.debugv("Result:\n%s", rst)
 
             rst = rst.splitlines()
 
@@ -126,21 +127,21 @@ def fetchAddressFromObjdump(functions, binary, source=""):
                 raise Exception("Error executing command: " + cmd)
 
         rst = result.read()
-        logger.debug("Result:\n%s", rst)
+        logger.debugv("Result:\n%s", rst)
 
         rst = rst.splitlines()
 
         for result in rst:
 
             if not "@plt>" in result:
-                logger.debug("Skipping %s", result)
+                logger.debugv("Skipping %s", result)
                 continue
 
             addr, funct = result.split()
             funct, _ = funct.split("@")
             funct = funct[1:]
             addr = addr.lstrip("0")
-            logger.debug("Split [%s] [%s]", addr, funct)
+            logger.debugv("Split [%s] [%s]", addr, funct)
 
             parseResult[funct] = addr
 
@@ -158,13 +159,13 @@ def fetchAddressFromObjdump(functions, binary, source=""):
                 raise Exception("Error executing command: " + cmd)
 
         rst = result.read()
-        logger.debug("Result:\n%s", rst)
+        logger.debugv("Result:\n%s", rst)
 
         rst = rst.splitlines()
         for result in rst:
             addr, _, _, _, _, funct = re.split("\W+", result, 5)
             addr = addr.lstrip("0")
-            logger.debug("Split [%s] [%s]", addr, funct)
+            logger.debugv("Split [%s] [%s]", addr, funct)
 
             parseResult[funct] = addr
 
@@ -208,13 +209,13 @@ def getInstructionAddress(dstAddresses, trace_file, bindir=os.path.dirname(os.pa
         raise Exception("Error executing command: " + cmd)
             
         
-    logger.debug("Result:\n%s", rst)
+    logger.debugv("Result:\n%s", rst)
 
     rst = rst.splitlines()
 
     for result in rst:
         instrAddr, _, dstAddr, _, ctr = result.split()
-        logger.debug("Checking instruction %s with destination %s frameno %s", instrAddr, dstAddr, ctr)
+        logger.debugv("Checking instruction %s with destination %s frameno %s", instrAddr, dstAddr, ctr)
 
         if dstAddr in dstAddresses:
             logger.info("%s is called at %s with frame no %s", dstAddr, instrAddr, ctr)
@@ -254,14 +255,14 @@ def fetchParam(trace_file, frame, paramCnt, bindir=os.path.dirname(os.path.realp
 
         rst = result.read()
 
-    logger.debug("Result:\n%s", rst)
+    logger.debugv("Result:\n%s", rst)
 
     rst = rst.splitlines()
     ret = []
     for result in rst:
 
         if not result.startswith("First memory location"):
-            logger.debug("Skipping %s", result)
+            logger.debugv("Skipping %s", result)
             continue
 
         result = result.split()
