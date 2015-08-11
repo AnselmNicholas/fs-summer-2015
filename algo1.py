@@ -171,6 +171,10 @@ def main():
         parser.error("trace file do not exist");
     if not os.path.exists(args.modload_error):
         parser.error("modload file do not exist");
+    if not args.bin_file is None:
+        if not os.path.exists(args.bin_file):
+            parser.error("bin file do not exist");        
+    
 
     if args.verbose == 0:logging.basicConfig(level=logging.WARNING)
     elif args.verbose == 1: logging.basicConfig(level=logging.INFO)
