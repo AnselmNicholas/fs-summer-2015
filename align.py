@@ -4,7 +4,7 @@ import logging
 from tempfile import mkstemp
 import os
 import subprocess
-
+import enhanceLogging
 
 def getFunctionNameCmd2(targetAddress, procFile, debug=False):
     """Print command to execute in console to fetch function name.
@@ -167,7 +167,7 @@ def align(r1, r2):
                 diffMode2 = diff.lookahead()[0]
                 logger.debug("Setting diffMode 2 to {}".format(diffMode2))
 
-            for i in range(int(a[1]) - int(a[0]) + 1):logger.debug(diff.next())
+            for i in range(int(a[1]) - int(a[0]) + 1):logger.debugv(diff.next())
         else:
             skippable = ["! ", "+ ", "- "]
             if diff.lookahead() is not None:
@@ -181,7 +181,7 @@ def align(r1, r2):
                         logger.debug("Setting diffMode 2 to {}".format(diffMode2))
 
                     logger.debug("Skipping single")
-                    logger.debug(diff.next())
+                    logger.debugv(diff.next())
 
 
         if amap is None:
