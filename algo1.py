@@ -97,8 +97,8 @@ def execAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modloa
         print "cp_detection: found error @ {0}".format(i["insn"])
 
 
-    ain_benign = align.genAIN(trace_benign)
-    ain_error = align.genAIN(trace_error)
+    ain_benign = align.genAINCache(trace_benign)
+    ain_error = align.genAINCache(trace_error)
     processed_align = []
 
     memory_error_count = len(memory_error_vertex)

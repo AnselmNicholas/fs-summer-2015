@@ -5,6 +5,8 @@ from tempfile import mkstemp
 import os
 import subprocess
 import enhanceLogging
+import fileCache
+from _sqlite3 import Cache
 
 def getFunctionNameCmd2(targetAddress, procFile, debug=False):
     """Print command to execute in console to fetch function name.
@@ -313,6 +315,18 @@ def runAlign(infile1, mlfile1, infile2, mlfile2, targetinsn, writediffresult=Fal
 
     logger.info("Input insn was mapped to insn {} funct {}".format(instructionNo, functionNo))
     return instructionNo, functionNo
+
+def genAINCache(trace, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/", cache=True):
+    logger = logging.getLogger(__name__)
+    logger.debug("Use file cache %s", cache)
+    if not cache:
+        return genAIN(trace, bindir)
+
+
+    filename = "genain-{trace}.ain".format(trace=trace)
+
+    return fileCache.get(filename, genAIN, (trace, bindir))
+
 
 def genAIN(trace, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/"):
     """
