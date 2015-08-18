@@ -4,9 +4,10 @@ import enhanceLogging
 import os
 import fileCache
 from misc import Lookahead
+import pygraphviz as pgv
+from sys import maxint
 
 slice_cache = {}
-
 
 forkInfoLoaded = False
 forkInfo = {}
@@ -137,8 +138,54 @@ def cacheSliceToFile(trace, insn, index=0, arch=32, cache=True):  # TODO: add er
     return fileCache.get(filename, slice, (trace, insn, index, arch))
 
 def slice(trace, insn, index=0, arch=32, followToRoot=False):
+    logger = logging.getLogger(__name__)
+    
+    
+    
+#     def isRegister(name):
+#         if name[:2] == "R_":return True
+#         return False
+    
+    
+    
     if not followToRoot:
         return sliceSingle(trace, insn, index, arch)
+
+    graph = sliceSingle(trace, insn, index, arch)
+
+    g = pgv.AGraph(graph)
+
+    vtx = g.nodes()
+    for n in vtx:
+        if not len(g.predecessors(n)):
+            logger.debug("Root node of slice: {}".format(n))
+            
+            out_edges = g.out_edges(n)
+            
+            if len(out_edges) == 0: #standalone
+                raise Exception("Uninplemented")
+            elif len(out_edges) == 1: #register
+                raise Exception("Uninplemented")
+            else:
+                
+                min_addr = maxint
+                min_addr_str = ""
+                for e in out_edges:
+                    current_addr = int(e.attr["label"],16)
+                    current_addr_str = e.attr["label"]
+                    if min_addr > current_addr:
+                        min_addr = current_addr
+                        min_addr_str = current_addr_str
+                        
+                logger.debug(min_addr_str)
+                
+                
+                
+                
+                
+                
+                
+    return g.to_string()
 
 def sliceSingle(trace, insn, index=0, arch=32):
     """Perform the slice and return the result as a string.
@@ -180,24 +227,27 @@ def sliceSingle(trace, insn, index=0, arch=32):
 
     return rst
 
-def test():
-    mlfile = r"/share/test/forktest/f4/f4.modload"
-    loadForkData(mlfile)
-
-
-
-    rootTrace = "2914-f4.bpt"
-    remaintraces = ["sccf4.bpt", "sccppccf4.bpt", "sccppcpccf4.bpt", "sccppcppcf4.bpt", "scccf4.bpt"   , "sccpcf4.bpt" , "sccppcf4.bpt"  , "sccppcpcf4.bpt", "scf4.bpt"]
-    binaryName = rootTrace.split("-", 1)[1]
-    #print binaryName
-
-
-
-    #for i in remaintraces:
-    #    print i, "-->", getParentTraceName(i, binaryName)
-
-    print slice("sccppcf4.bpt", 2272, 0, followToRoot=True)
-
-
-
-test()
+# def test():
+# 
+#     logging.basicConfig(level=enhanceLogging.DEBUG_LEVELV_NUM)
+# 
+#     mlfile = r"/share/test/forktest/f4/f4.modload"
+#     loadForkData(mlfile)
+# 
+# 
+# 
+#     rootTrace = "2914-f4.bpt"
+#     remaintraces = ["sccf4.bpt", "sccppccf4.bpt", "sccppcpccf4.bpt", "sccppcppcf4.bpt", "scccf4.bpt"   , "sccpcf4.bpt" , "sccppcf4.bpt"  , "sccppcpcf4.bpt", "scf4.bpt"]
+#     binaryName = rootTrace.split("-", 1)[1]
+#     # print binaryName
+# 
+# 
+# 
+#     # for i in remaintraces:
+#     #    print i, "-->", getParentTraceName(i, binaryName)
+# 
+#     print slice("sccppcf4.bpt", 2272, 0, followToRoot=True)
+# 
+# 
+# 
+# test()
