@@ -16,8 +16,6 @@ class interimCache:
             
             item_final.append(i)
 
-        
-
         self.filename = "_".join(item_final) + ".cache"
         self.fullpath = self.cacheFolder + self.filename
 

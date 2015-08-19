@@ -1,12 +1,11 @@
 import logging
-import subprocess
+# import subprocess
 import enhanceLogging
 import os
 import fileCache
-from misc import Lookahead,execute
+from misc import Lookahead, execute
 import pygraphviz as pgv
 from sys import maxint
-import interimCache
 
 slice_cache = {}
 
@@ -42,7 +41,7 @@ def getParentTraceName(tracename, binaryName):
     return parentName + binaryName, parentInsnNo
 
 
-def findParentSliceCanditate(trace, forkInsnNo, memoryLoc):
+def findParentSliceCanditate(trace, forkInsnNo, memoryLoc, cache=False):
     """Perform the stitching of slice to search for slice candidate in parent trace.
 
     Executes the following command
@@ -53,15 +52,8 @@ def findParentSliceCanditate(trace, forkInsnNo, memoryLoc):
     logger.info("Determining slice candidate of %s from %s for location %s", trace, forkInsnNo, memoryLoc)
 
     cmd = "findParentSliceCandidate {trace} {forkInsnNo} {memoryLoc}".format(trace=trace, forkInsnNo=forkInsnNo, memoryLoc=memoryLoc)
-    logger.debug("Executing command: " + cmd)
 
-
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, close_fds=True)
-
-    stdout = p.stdout
-    with stdout as result:
-        rst = result.read().strip()
-        logger.debugv("Result:\n%s", rst)
+    rst = execute(cmd, cache)
 
     rst = rst.split()
     rst = ":".join(rst)
@@ -69,20 +61,6 @@ def findParentSliceCanditate(trace, forkInsnNo, memoryLoc):
     if not rst or rst == "err:err":
         logger.error("Error in command: " + cmd)
         raise Exception("Error executing command: " + cmd)
-
-#     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-
-#     stdout = p.stdout
-#     stderr = p.stderr
-#     with stdout as result:
-#         with stderr as err:
-#             errTxt = err.read()
-#             if errTxt:
-#                 logger.error("Error in command:\n" + errTxt)
-#                 raise Exception("Error executing command: " + cmd)
-
-#         rst = result.read()
-#         logger.debugv("Result:\n%s", rst)
 
     return rst
 
@@ -96,61 +74,27 @@ def get(trace, insn, index=0):
     slicedDFG = slice_cache.get((trace, insn, index), None)
 
     if slicedDFG is None:
-        slicedDFG = cacheSliceToFile(trace, insn, index)
+        slicedDFG = slice(trace, insn, index)
         slice_cache[(trace, insn, index)] = slicedDFG
 
     return slicedDFG
 
-
-# def cacheSliceToFile(trace, insn, index=0, arch=32, cache=True):  # TODO: add error checking
-#     """Load and save result to cache
-#     """
-#     logger = logging.getLogger(__name__)
-#     logger.debug("Use file cache %s", cache)
-#     if not cache:
-#         return slice(trace, insn, index, arch)
-#
-#
-#     filename = "slicer-{arch}-{trace}-{insn}-{index}.slice".format(arch=arch, trace=trace, insn=insn, index=index)
-#     filename = "cache/" + filename
-#     logger.debug("Cache file name is " + filename)
-#     if os.path.exists(filename):
-#         logger.debug("Returning result from cache")
-#         with open(filename) as f:
-#             return f.read()
-#     else:
-#         rst = slice(trace, insn, index, arch)
-#         logger.debug("Writing result to cache")
-#         with open(filename, "w") as f:
-#             f.write(rst)
-#             return rst
-
-def cacheSliceToFile(trace, insn, index=0, arch=32, cache=True):  # TODO: add error checking
-    """Load and save result to cache
-    """
-    logger = logging.getLogger(__name__)
-    logger.debug("Use file cache %s", cache)
-    if not cache:
-        return slice(trace, insn, index, arch)
-
-
-    filename = "slicer-{arch}-{trace}-{insn}-{index}.slice".format(arch=arch, trace=trace, insn=insn, index=index)
-
-    return fileCache.get(filename, slice, (trace, insn, index, arch))
-
 def slice(trace, insn, index=0, arch=32, followToRoot=False):
     logger = logging.getLogger(__name__)
-    
-    
-    
+
+
+
 #     def isRegister(name):
 #         if name[:2] == "R_":return True
 #         return False
-    
-    
-    
+
+
+
     if not followToRoot:
+        logger.info("Performing single slice")
         return sliceSingle(trace, insn, index, arch)
+    
+    logger.info("Performing stitch slice")
 
     graph = sliceSingle(trace, insn, index, arch)
 
@@ -160,35 +104,35 @@ def slice(trace, insn, index=0, arch=32, followToRoot=False):
     for n in vtx:
         if not len(g.predecessors(n)):
             logger.debug("Root node of slice: {}".format(n))
-            
+
             out_edges = g.out_edges(n)
-            
-            if len(out_edges) == 0: #standalone
+
+            if len(out_edges) == 0:  # standalone
                 raise Exception("Uninplemented")
-            elif len(out_edges) == 1: #register
+            elif len(out_edges) == 1:  # register
                 raise Exception("Uninplemented")
             else:
-                
+
                 min_addr = maxint
                 min_addr_str = ""
                 for e in out_edges:
-                    current_addr = int(e.attr["label"],16)
+                    current_addr = int(e.attr["label"], 16)
                     current_addr_str = e.attr["label"]
                     if min_addr > current_addr:
                         min_addr = current_addr
                         min_addr_str = current_addr_str
-                        
+
                 logger.debug(min_addr_str)
-                
-                
-                
-                
-                
-                
-                
+
+
+
+
+
+
+
     return g.to_string()
 
-def sliceSingle(trace, insn, index=0, arch=32,cache = True):
+def sliceSingle(trace, insn, index=0, arch=32, cache=False):
     """Perform the slice and return the result as a string.
 
     Executes the following command
@@ -199,65 +143,8 @@ def sliceSingle(trace, insn, index=0, arch=32,cache = True):
     logger.info("Slicing %s at %s:%s", trace, insn, index)
 
     cmd = "binslicer-{arch} {trace} {insn}:{index}".format(arch=arch, trace=trace, insn=insn, index=index)
-    
-    if (cache):
-        ic = interimCache(cmd)
-        if ic.exist(): return ic.load()
-    
-    rst = execute(cmd)
-    
-    if (cache):
-        ic.save(rst)
-#     logger.debug("Executing command: " + cmd)
-#
-#
-#     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, close_fds=True)
-#
-#     stdout = p.stdout
-#     with stdout as result:
-#         rst = result.read().strip()
-#         logger.debugv("Result:\n%s", rst)
-#     if not rst:
-#         logger.error("Error in command: " + cmd)
-#         raise Exception("Error executing command: " + cmd)
 
-#     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-
-#     stdout = p.stdout
-#     stderr = p.stderr
-#     with stdout as result:
-#         with stderr as err:
-#             errTxt = err.read()
-#             if errTxt:
-#                 logger.error("Error in command:\n" + errTxt)
-#                 raise Exception("Error executing command: " + cmd)
-
-#         rst = result.read()
-#         logger.debugv("Result:\n%s", rst)
+    rst = execute(cmd, cache)
 
     return rst
 
-# def test():
-# 
-#     logging.basicConfig(level=enhanceLogging.DEBUG_LEVELV_NUM)
-# 
-#     mlfile = r"/share/test/forktest/f4/f4.modload"
-#     loadForkData(mlfile)
-# 
-# 
-# 
-#     rootTrace = "2914-f4.bpt"
-#     remaintraces = ["sccf4.bpt", "sccppccf4.bpt", "sccppcpccf4.bpt", "sccppcppcf4.bpt", "scccf4.bpt"   , "sccpcf4.bpt" , "sccppcf4.bpt"  , "sccppcpcf4.bpt", "scf4.bpt"]
-#     binaryName = rootTrace.split("-", 1)[1]
-#     # print binaryName
-# 
-# 
-# 
-#     # for i in remaintraces:
-#     #    print i, "-->", getParentTraceName(i, binaryName)
-# 
-#     print slice("sccppcf4.bpt", 2272, 0, followToRoot=True)
-# 
-# 
-# 
-# test()

@@ -3,10 +3,8 @@ import misc
 import logging
 from tempfile import mkstemp
 import os
-import subprocess
 import enhanceLogging
-import fileCache
-from _sqlite3 import Cache
+from misc import execute
 
 def getFunctionNameCmd2(targetAddress, procFile, debug=False):
     """Print command to execute in console to fetch function name.
@@ -316,19 +314,7 @@ def runAlign(infile1, mlfile1, infile2, mlfile2, targetinsn, writediffresult=Fal
     logger.info("Input insn was mapped to insn {} funct {}".format(instructionNo, functionNo))
     return instructionNo, functionNo
 
-def genAINCache(trace, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/", cache=True):
-    logger = logging.getLogger(__name__)
-    logger.debug("Use file cache %s", cache)
-    if not cache:
-        return genAIN(trace, bindir)
-
-
-    filename = "genain-{trace}.ain".format(trace=trace)
-
-    return fileCache.get(filename, genAIN, (trace, bindir))
-
-
-def genAIN(trace, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/"):
+def genAIN(trace, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/", cache=False):
     """
     Generate ain of trace
 
@@ -345,14 +331,11 @@ def genAIN(trace, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/"):
     logger.info("Temp ain file created at " + name)
 
     cmd = "{0}fetchAIN {1}".format(bindir, trace)
-    logger.debug("Executing command: " + cmd)
 
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, close_fds=True)
+    rst = execute(cmd, cache)
 
-    stdout = p.stdout
-    with stdout as result:
-        with open(name, "w") as f:
-            f.writelines(result)
+    with open(name, "w") as f:
+            f.write(rst)
 
     logger.info("ain generated")
     return name

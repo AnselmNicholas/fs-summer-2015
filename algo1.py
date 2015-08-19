@@ -4,11 +4,11 @@ import align
 from criticalDataIdentify import critDataIdentify
 import argparse
 import json
-import subprocess
 from stitchAlgo import runAlgo1
 import enhanceLogging
+from misc import execute
 
-def fetchMemoryError(trace_error, arch=32):
+def fetchMemoryError(trace_error, arch=32,cache = False):
     """Run cp_detect and return result as a list of dict.
 
     Executes the following command
@@ -26,63 +26,37 @@ def fetchMemoryError(trace_error, arch=32):
 
     ret = []
     currentVal = None
-#     stdout, stdin, stderr = os.popen3(cmd)
 
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+    rst = execute(cmd,cache)
 
-    stdout = p.stdout
-    stderr = p.stderr
-    with stdout as result:
-        with stderr as err:
-            errTxt = err.read()
-            if errTxt:
-                logger.error("Error in command:\n" + errTxt)
-                raise Exception("Error executing command: " + cmd)
+    for line in rst.splitlines():
+        if line[:9] == "arbitrary":
+            if currentVal is not None:
+                ret.append(currentVal)
+            currentVal = {}
+            continue
 
-        rst = result.read()
-        logger.debugv("Result:\n%s", rst)
+        line = line.split(":", 1)
 
-        for line in rst.splitlines():
-            if line[:9] == "arbitrary":
-                if currentVal is not None:
-                    ret.append(currentVal)
-                currentVal = {}
-                continue
+        if line[0] == "\tbase memory reg":
+            currentVal["baseMemoryReg"] = line[1]
+        elif line[0] == '\tindex memory reg':
+            currentVal["indexMemoryReg"] = line[1]
+        elif line[0] == '\tvalue  reg':
+            currentVal["valueReg"] = line[1]
+        elif line[0] == "\tinsn":
+            insn, addr = line[1].split()
+            currentVal["insn"] = int(insn)
+            currentVal["insnAddr"] = addr
+        else:
+            logger.warning("Unhandled cp_detect output: %s", line)
 
-            line = line.split(":", 1)
-
-            if line[0] == "\tbase memory reg":
-                currentVal["baseMemoryReg"] = line[1]
-            elif line[0] == '\tindex memory reg':
-                currentVal["indexMemoryReg"] = line[1]
-            elif line[0] == '\tvalue  reg':
-                currentVal["valueReg"] = line[1]
-            elif line[0] == "\tinsn":
-                insn, addr = line[1].split()
-                currentVal["insn"] = int(insn)
-                currentVal["insnAddr"] = addr
-            else:
-                logger.warning("Unhandled cp_detect output: %s", line)
-
-        ret.append(currentVal)
+    ret.append(currentVal)
 
     return ret
 
 def execAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload_error, identifyCriticalData=False, functions_file="", binary_file=""):
     logger = logging.getLogger(__name__)
-#     criticalDataRst = {'seteuid': {
-#         '1000873': [['1000872', 'bfffdb80']],
-#         '1142250': [['1142249', 'bfffdf80']],
-#         '2469374': [['2469373', 'bfffdff0']],
-#         '2424795': [['2424794', 'bfffdf80']]
-#         }
-#     }
-#
-#     inputFolder = "align/test1/"
-#     trace_benign = inputFolder + "scalign-wuftpd-skiplib-6.bpt"
-#     modload_benign = inputFolder + "align-wuftpd-skiplib-6.modload"
-#     trace_error = inputFolder + "scalign-err-wuftpd-skiplib-4.bpt"
-#     modload_error = inputFolder + "align-err-wuftpd-skiplib-4.modload"
 
     if (identifyCriticalData):
         criticalDataRst = critDataIdentify.run(functions_file, trace_benign, binary_file)
@@ -97,8 +71,8 @@ def execAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modloa
         print "cp_detection: found error @ {0}".format(i["insn"])
 
 
-    ain_benign = align.genAINCache(trace_benign)
-    ain_error = align.genAINCache(trace_error)
+    ain_benign = align.genAIN(trace_benign)
+    ain_error = align.genAIN(trace_error)
     processed_align = []
 
     memory_error_count = len(memory_error_vertex)

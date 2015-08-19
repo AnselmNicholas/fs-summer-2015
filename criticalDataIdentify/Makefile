@@ -1,4 +1,4 @@
-LIBTRACE_DIR = /share/skiplib/bap/libtrace
+LIBTRACE_DIR = /share/skiplib/bap/libtracewrap/libtrace
 PIN_DIR = /share/skiplib/bap/pin
 BIN_DIR = bin
 CXX = g++

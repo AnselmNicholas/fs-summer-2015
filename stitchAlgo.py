@@ -2,15 +2,16 @@ import logging
 import pygraphviz as pgv
 import collections
 import os
-import subprocess
+# import subprocess
 import slicer
 import enhanceLogging
+from misc import execute
 
 def isRegister(name):
     if name[:2] == "R_":return True
     return False
 
-def isVPUsedToWriteV(trace, insn, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/"):
+def isVPUsedToWriteV(trace, insn, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/", cache=False):
     """
     Check if VP at insn is used to write to V at insn
 
@@ -25,18 +26,9 @@ def isVPUsedToWriteV(trace, insn, bindir=os.path.dirname(os.path.realpath(__file
     logger = logging.getLogger(__name__)
 
     cmd = "{0}isVPUsedToWriteV {1} {2}".format(bindir, trace, insn)
-    logger.debug("Executing command: " + cmd)
 
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, close_fds=True)
+    rst = execute(cmd, cache)
 
-    stdout = p.stdout
-    with stdout as result:
-        rst = result.read().strip()
-    if not rst:
-        logger.error("Error in command: " + cmd)
-        raise Exception("Error executing command: " + cmd)
-
-    logger.debug("Result: " + rst)
     if rst == "True":
         return True
     elif rst == "False":
@@ -45,7 +37,7 @@ def isVPUsedToWriteV(trace, insn, bindir=os.path.dirname(os.path.realpath(__file
         logger.error("Unknown return: " + rst)
         raise Exception("Unknown return: " + rst)
 
-def isAliveAt(trace, start, end, address, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/"):
+def isAliveAt(trace, start, end, address, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/", cache=False):
     """
     Check address has been written to from insn start to insn end
 
@@ -62,18 +54,8 @@ def isAliveAt(trace, start, end, address, bindir=os.path.dirname(os.path.realpat
     logger = logging.getLogger(__name__)
 
     cmd = "{bindir}isAliveAt {trace} {start} {address} {end}".format(bindir=bindir, trace=trace, start=start, end=end, address=address)
-    logger.debug("Executing command: " + cmd)
 
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, close_fds=True)
-
-    stdout = p.stdout
-    with stdout as result:
-        rst = result.read().strip()
-    if not rst:
-        logger.error("Error in command: " + cmd)
-        raise Exception("Error executing command: " + cmd)
-
-    logger.debug("Result: " + rst)
+    rst = execute(cmd, cache)
 
     adStatus = rst.split(" ", 1)
 
@@ -85,7 +67,7 @@ def isAliveAt(trace, start, end, address, bindir=os.path.dirname(os.path.realpat
         logger.error("Unknown return: " + rst)
         raise Exception("Unknown return: " + rst)
 
-def getVPP(trace, insn, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/"):
+def getVPP(trace, insn, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/", cache=False):
     """
     Get the address of vp for the memory access at insn
 
@@ -99,18 +81,8 @@ def getVPP(trace, insn, bindir=os.path.dirname(os.path.realpath(__file__)) + "/b
     logger = logging.getLogger(__name__)
 
     cmd = "{bindir}getVPP {trace} {insn}".format(bindir=bindir, trace=trace, insn=insn)
-    logger.debug("Executing command: " + cmd)
 
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, close_fds=True)
-
-    stdout = p.stdout
-    with stdout as result:
-        rst = result.read().strip()
-    if not rst:
-        logger.error("Error in command: " + cmd)
-        raise Exception("Error executing command: " + cmd)
-
-    logger.debug("Result: " + rst)
+    rst = execute(cmd, cache)
 
     vppRst = rst.split(" ", 1)
 
