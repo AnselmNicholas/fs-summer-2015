@@ -1,5 +1,5 @@
-LIBTRACE_DIR = ../criticalDataIdentify/libtrace
-PIN_DIR = ../criticalDataIdentify/pin
+LIBTRACE_DIR = /share/skiplib/bap/libtrace
+PIN_DIR = /share/skiplib/bap/pin
 BIN_DIR = ../bin
 CXX = g++
 CXXFLAGS = -I$(LIBTRACE_DIR)/src/cpp/pb  -I$(LIBTRACE_DIR)/src/common \

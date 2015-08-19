@@ -3,9 +3,10 @@ import subprocess
 import enhanceLogging
 import os
 import fileCache
-from misc import Lookahead
+from misc import Lookahead,execute
 import pygraphviz as pgv
 from sys import maxint
+import interimCache
 
 slice_cache = {}
 
@@ -187,7 +188,7 @@ def slice(trace, insn, index=0, arch=32, followToRoot=False):
                 
     return g.to_string()
 
-def sliceSingle(trace, insn, index=0, arch=32):
+def sliceSingle(trace, insn, index=0, arch=32,cache = True):
     """Perform the slice and return the result as a string.
 
     Executes the following command
@@ -198,18 +199,27 @@ def sliceSingle(trace, insn, index=0, arch=32):
     logger.info("Slicing %s at %s:%s", trace, insn, index)
 
     cmd = "binslicer-{arch} {trace} {insn}:{index}".format(arch=arch, trace=trace, insn=insn, index=index)
-    logger.debug("Executing command: " + cmd)
-
-
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, close_fds=True)
-
-    stdout = p.stdout
-    with stdout as result:
-        rst = result.read().strip()
-        logger.debugv("Result:\n%s", rst)
-    if not rst:
-        logger.error("Error in command: " + cmd)
-        raise Exception("Error executing command: " + cmd)
+    
+    if (cache):
+        ic = interimCache(cmd)
+        if ic.exist(): return ic.load()
+    
+    rst = execute(cmd)
+    
+    if (cache):
+        ic.save(rst)
+#     logger.debug("Executing command: " + cmd)
+#
+#
+#     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, close_fds=True)
+#
+#     stdout = p.stdout
+#     with stdout as result:
+#         rst = result.read().strip()
+#         logger.debugv("Result:\n%s", rst)
+#     if not rst:
+#         logger.error("Error in command: " + cmd)
+#         raise Exception("Error executing command: " + cmd)
 
 #     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 
