@@ -33,7 +33,7 @@ class Lookahead:
 def execute(cmd, cache=False):
     
     #testing
-    #cache=True
+    cache=True
     
     if (cache):
         ic = interimCache(cmd)
