@@ -5,6 +5,7 @@ import os
 import fileCache
 from misc import Lookahead, execute
 import pygraphviz as pgv
+from tracereader.trace_container import TraceContainerReader
 
 slice_cache = {}
 
@@ -152,10 +153,25 @@ def slice(trace, insn, index=0, arch=32, followToRoot=False, tname=None, sliceIn
                 if len(out_edges) == 0:  # standalone
                     raise Exception("Uninplemented")
                 elif len(out_edges) == 1:  # register
-                    raise Exception("Uninplemented")
+                    tcr = TraceContainerReader(trace)
+                    tcr.seek(int(n))
+                    f = tcr.get_frame()
+                    
+                    min_addr = -1
+                    for elem in f.std_frame.operand_pre_list.elem:
+                        if not elem.operand_info_specific.HasField("mem_operand"): continue
+                        if not elem.operand_usage.read: continue
+                        
+                        current_addr = elem.operand_info_specific.mem_operand.address
+                        if min_addr > current_addr or min_addr < 0:
+                            min_addr = current_addr
+                    
+                    min_addr_str = format(min_addr,"x")
+
+
+
                 else:
                     min_addr = -1
-                    min_addr_str = ""
                     for e in out_edges:
                         current_addr = int(e.attr["label"], 16)
                         current_addr_str = e.attr["label"]
@@ -163,8 +179,8 @@ def slice(trace, insn, index=0, arch=32, followToRoot=False, tname=None, sliceIn
                             min_addr = current_addr
                             min_addr_str = current_addr_str
 
-                    logger.debug("Min addr of root node is {}".format(min_addr_str))
-                    memoryLoc = min_addr_str
+                logger.debug("Min addr of root node is {}".format(min_addr_str))
+                memoryLoc = min_addr_str
 
 
                 sliceCandidate = findParentSliceCandidate(parentTrace[0], parentTrace[1], memoryLoc, cache=cache)
@@ -186,7 +202,7 @@ def slice(trace, insn, index=0, arch=32, followToRoot=False, tname=None, sliceIn
                 # ret.add_edge("{}:{}".format(parentTraceHead, parentTrace[1]), "{}:{}".format(tname, 0), key=None, label="passthru", color="blue", style="bold")
                 # ret.add_edge("{}:{}".format(tname, 0), "{}:{}".format(tname, n), key=None, label=min_addr_str, color="red", style="bold")
 
-                ret.add_edge("{}:{}".format(parentTraceHead, sliceCandidate[0]), "{}:{}".format(tname, n), key=None, label=min_addr_str, color="blue", style="bold")
+                ret.add_edge("{}:{}".format(parentTraceHead, sliceCandidate[0]), "{}:{}".format(tname, n), key=None, label="passtru:{}:{}".format(min_addr_str, parentTrace[1]), color="blue", style="bold")
 
 
     return ret.to_string()
@@ -211,14 +227,14 @@ def test():
 
     logging.basicConfig(level=enhanceLogging.DEBUG_LEVELV_NUM)
 
-    mlfile = r"/vagrant/test/forktest/f4/f4.modload"
-    # loadForkData(mlfile)
+#     mlfile = r"/vagrant/test/forktest/f4/f4.modload"
+#     rootTrace = "2914-f4.bpt"
+#     remaintraces = ["sccf4.bpt", "sccppccf4.bpt", "sccppcpccf4.bpt", "sccppcppcf4.bpt", "scccf4.bpt"   , "sccpcf4.bpt" , "sccppcf4.bpt"  , "sccppcpcf4.bpt", "scf4.bpt"]
 
+    mlfile = r"/vagrant/summer/experiment/sudo/sudo-skip-3.modload"
+    rootTrace = "25480-sudo-skip-3.bpt"
+    remaintraces = ["scsudo-skip-3.bpt"]
 
-
-
-    rootTrace = "2914-f4.bpt"
-    remaintraces = ["sccf4.bpt", "sccppccf4.bpt", "sccppcpccf4.bpt", "sccppcppcf4.bpt", "scccf4.bpt"   , "sccpcf4.bpt" , "sccppcf4.bpt"  , "sccppcpcf4.bpt", "scf4.bpt"]
     traceName = rootTrace.split("-", 1)[1]
 
     sliceInfo = Slice(traceName, rootTrace, remaintraces, mlfile)
@@ -228,7 +244,9 @@ def test():
 
     # for i in remaintraces:
     #   print i, "-->", sliceInfo.getName(i)
-    print slice("sccppcf4.bpt", 2272, 0, followToRoot=True, sliceInfo=sliceInfo, cache=True)
+#     print slice("sccppcf4.bpt", 2272, 0, followToRoot=True, sliceInfo=sliceInfo, cache=True)
+    print slice(remaintraces[0], 3194, 0, followToRoot=True, sliceInfo=sliceInfo, cache=True)
+
 
 
 
