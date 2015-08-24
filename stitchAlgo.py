@@ -104,7 +104,6 @@ def getEdges(graph, src):
 
 
     que.append(src_node)
-    result = []
     while que:
         child = que.pop()
 
@@ -112,7 +111,7 @@ def getEdges(graph, src):
             continue
 
         visited[child] = True
-        c = int(child.name)
+        # c = int(child.name)
 
 
         edges = {}
@@ -137,7 +136,7 @@ def getEdges(graph, src):
             yield edges[parent][addr]
 
 
-def runAlgo1(G, I, vT):
+def runAlgo1(G, I, vT, sliceStitch=False, sliceInfo=None):
     """
 
     Input:
@@ -152,20 +151,60 @@ def runAlgo1(G, I, vT):
 
     result = []
 
-    tdslice = slicer.get(G, vT)
+    vTi = vT
+    if sliceStitch:
+        vTi = vT.split(":", 1)[1]
+    tdslice = slicer.get(G, vTi, sliceStitch=sliceStitch, sliceInfo=sliceInfo)
 
     TDFlow = pgv.AGraph(tdslice)
 
-    for V in getEdges(TDFlow, vT):
-        p = int(V[0])
-        c = int(V[1])
+    if sliceStitch:
+        it, i = I[0].split(":", 1)
+        i = int(i)
+    else:
+        i = I[0]
 
-        mem = V.attr["label"]
+    for V in getEdges(TDFlow, vT):
+        if sliceStitch:
+            po = V[0]
+            pt, p = po.split(":", 1)
+            p = int(p)
+            co = V[1]
+            ct, c = co.split(":", 1)
+            c = int(c)
+            
+            mem = V.attr["label"]
+            passtru = False
+            if mem.startswith("passtru"):  # passtru:805c800:1089664
+                _, mem, forkins = mem.split(":", 2)
+                passtru = True
+                
+        else:
+            p = int(V[0])
+            c = int(V[1])
+            mem = V.attr["label"]
+        
+        
+        
         if isRegister(mem): continue  # 4
 
-        if p < I[0] and I[0] < c:
-            logger.info("Possible edge: {} {} {}".format(p, c, mem))
-            result.append([p, c, mem])
+        if sliceStitch:
+            if passtru:
+                if pt == it and p < i and i < forkins:
+                    logger.info("Possible edge in parent: {} {} {}".format(po, co, mem))
+                    result.append([po, co, mem])
+                elif ct == it and i < c:
+                    logger.info("Possible edge in child: {} {} {}".format(po, co, mem))
+                    result.append([po, co, mem])
+                
+            else:  # do like normal except check trace name as well
+                if pt == it and p < i and i < c:
+                    logger.info("Possible edge: {} {} {}".format(po, co, mem))
+                    result.append([po, co, mem])
+        else:            
+            if p < i and i < c:
+                logger.info("Possible edge: {} {} {}".format(p, c, mem))
+                result.append([p, c, mem])
 
     return result
 

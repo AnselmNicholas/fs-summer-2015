@@ -9,10 +9,6 @@ from tracereader.trace_container import TraceContainerReader
 
 slice_cache = {}
 
-forkInfoLoaded = False
-
-
-
 class Slice:
     def __init__(self, traceName, rootTrace, childTraces, mlfile):
         """
@@ -92,17 +88,17 @@ def findParentSliceCandidate(trace, forkInsnNo, memoryLoc, bindir=os.path.dirnam
     return rst
 
 
-def get(trace, insn, index=0):
+def get(trace, insn, index=0, sliceStitch=False, sliceInfo=None):
     """Fetch slice result from cache perform a slice
     """
     logger = logging.getLogger(__name__)
 
-    logger.debug("Fetching slice result of {insn}:{index} from {trace}".format(trace=trace, insn=insn, index=index))
-    slicedDFG = slice_cache.get((trace, insn, index), None)
+    logger.debug("Fetching slice result of {insn}:{index} from {trace} slice-stitch is {ss}".format(trace=trace, insn=insn, index=index, ss=sliceStitch))
+    slicedDFG = slice_cache.get((trace, insn, index, sliceStitch), None)
 
     if slicedDFG is None:
-        slicedDFG = slice(trace, insn, index)
-        slice_cache[(trace, insn, index)] = slicedDFG
+        slicedDFG = slice(trace, insn, index, followToRoot=sliceStitch, sliceInfo=sliceInfo)
+        slice_cache[(trace, insn, index, sliceStitch)] = slicedDFG
 
     return slicedDFG
 
@@ -121,11 +117,14 @@ def slice(trace, insn, index=0, arch=32, followToRoot=False, tname=None, sliceIn
 
     logger.info("Performing stitch slice")
 
+#     print insn
+#     itname , insn = insn.split(":", 1)
     graph = sliceSingle(trace, insn, index, arch, cache=cache)
 
 
     if tname is None:
         tname = sliceInfo.getName(trace)
+#         assert tname == itname
 
     ret = pgv.AGraph(directed=True, strict=False)
     ret.node_attr.update(shape="box")
@@ -166,7 +165,7 @@ def slice(trace, insn, index=0, arch=32, followToRoot=False, tname=None, sliceIn
                         if min_addr > current_addr or min_addr < 0:
                             min_addr = current_addr
                     
-                    min_addr_str = format(min_addr,"x")
+                    min_addr_str = format(min_addr, "x")
 
 
 
@@ -222,32 +221,3 @@ def sliceSingle(trace, insn, index=0, arch=32, cache=False):
     rst = execute(cmd, cache)
 
     return rst
-
-def test():
-
-    logging.basicConfig(level=enhanceLogging.DEBUG_LEVELV_NUM)
-
-#     mlfile = r"/vagrant/test/forktest/f4/f4.modload"
-#     rootTrace = "2914-f4.bpt"
-#     remaintraces = ["sccf4.bpt", "sccppccf4.bpt", "sccppcpccf4.bpt", "sccppcppcf4.bpt", "scccf4.bpt"   , "sccpcf4.bpt" , "sccppcf4.bpt"  , "sccppcpcf4.bpt", "scf4.bpt"]
-
-    mlfile = r"/vagrant/summer/experiment/sudo/sudo-skip-3.modload"
-    rootTrace = "25480-sudo-skip-3.bpt"
-    remaintraces = ["scsudo-skip-3.bpt"]
-
-    traceName = rootTrace.split("-", 1)[1]
-
-    sliceInfo = Slice(traceName, rootTrace, remaintraces, mlfile)
-    # print binaryName
-
-
-
-    # for i in remaintraces:
-    #   print i, "-->", sliceInfo.getName(i)
-#     print slice("sccppcf4.bpt", 2272, 0, followToRoot=True, sliceInfo=sliceInfo, cache=True)
-    print slice(remaintraces[0], 3194, 0, followToRoot=True, sliceInfo=sliceInfo, cache=True)
-
-
-
-
-test()
