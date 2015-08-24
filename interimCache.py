@@ -1,7 +1,7 @@
 import logging, os
 
 class interimCache:
-    cacheFolder = "cache/"
+    cacheFolder = "cachez/"
     invalidChars = '\/:*?"<>|'
     def __init__(self, cmd):
         logger = logging.getLogger(__name__)

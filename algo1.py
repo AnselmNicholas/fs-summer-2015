@@ -179,8 +179,10 @@ def run2(cp_traceIn, alignIn, criticalIn, benignIn, errorIn, cache=False):
 
                     insn, espValue = param
 
-                    # corruption_target = runAlgo1(trace_benign, [alignRst[0]], insn)
-                    corruption_target = runAlgo1(benignIn.getTrace(alignIn[0]), [alignRst[0]], insn, sliceStitch=False, sliceInfo=benignIn)
+                    if sliceStitch:
+                        corruption_target = runAlgo1(benignIn.getTrace(criticalIn[1]), [(benignIn.getNameK(alignIn[0]), alignRst[0])], (benignIn.getNameK(criticalIn[1]), insn), sliceStitch=True, sliceInfo=benignIn)
+                    else:
+                        corruption_target = runAlgo1(benignIn.getTrace(criticalIn[1]), [alignRst[0]], insn, sliceStitch=False, sliceInfo=benignIn)
 
                     if not corruption_target:
                         print "single stitch candidates selection: {function_name} {call_no} {param_no}: faied to find".format(function_name=function_name, call_no=j, param_no=k)

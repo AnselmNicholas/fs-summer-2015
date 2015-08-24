@@ -2,7 +2,6 @@ import logging
 # import subprocess
 import enhanceLogging
 import os
-import fileCache
 from misc import Lookahead, execute
 import pygraphviz as pgv
 from tracereader.trace_container import TraceContainerReader
@@ -49,6 +48,10 @@ class SliceInfo:
                     parentinsn = l[6]
                     forkInfo[forkname] = parentinsn
         return forkInfo
+
+    def getNameK(self, param):
+
+        return self.getName(self.getTrace(param))
 
     def getName(self, tracename):
         logger = logging.getLogger(__name__)

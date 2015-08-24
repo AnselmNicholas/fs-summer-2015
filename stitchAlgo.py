@@ -152,19 +152,22 @@ def runAlgo1(G, I, vT, sliceStitch=False, sliceInfo=None):
     result = []
 
     vTi = vT
+    vTs = vT
     if sliceStitch:
-        vTi = vT.split(":", 1)[1]
+        _, vTi = vT
+        vTs = "{}:{}".format(*vT)
     tdslice = slicer.get(G, vTi, sliceStitch=sliceStitch, sliceInfo=sliceInfo)
 
     TDFlow = pgv.AGraph(tdslice)
 
     if sliceStitch:
-        it, i = I[0].split(":", 1)
-        i = int(i)
+        it, i = I[0]
     else:
         i = I[0]
 
-    for V in getEdges(TDFlow, vT):
+
+
+    for V in getEdges(TDFlow, vTs):
         if sliceStitch:
             po = V[0]
             pt, p = po.split(":", 1)
@@ -172,20 +175,20 @@ def runAlgo1(G, I, vT, sliceStitch=False, sliceInfo=None):
             co = V[1]
             ct, c = co.split(":", 1)
             c = int(c)
-            
+
             mem = V.attr["label"]
             passtru = False
             if mem.startswith("passtru"):  # passtru:805c800:1089664
                 _, mem, forkins = mem.split(":", 2)
                 passtru = True
-                
+
         else:
             p = int(V[0])
             c = int(V[1])
             mem = V.attr["label"]
-        
-        
-        
+
+
+
         if isRegister(mem): continue  # 4
 
         if sliceStitch:
@@ -196,12 +199,12 @@ def runAlgo1(G, I, vT, sliceStitch=False, sliceInfo=None):
                 elif ct == it and i < c:
                     logger.info("Possible edge in child: {} {} {}".format(po, co, mem))
                     result.append([po, co, mem])
-                
+
             else:  # do like normal except check trace name as well
                 if pt == it and p < i and i < c:
                     logger.info("Possible edge: {} {} {}".format(po, co, mem))
                     result.append([po, co, mem])
-        else:            
+        else:
             if p < i and i < c:
                 logger.info("Possible edge: {} {} {}".format(p, c, mem))
                 result.append([p, c, mem])
