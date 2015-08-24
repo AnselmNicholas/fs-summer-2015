@@ -9,7 +9,7 @@ import enhanceLogging
 from misc import execute
 from ConfigParser import SafeConfigParser
 from ConfigParser import NoOptionError
-from slicer import Slice
+from slicer import SliceInfo
 
 def fetchMemoryError(trace_error, arch=32, cache=False):
     """Run cp_detect and return result as a list of dict.
@@ -266,13 +266,13 @@ def main():
         benign_trace_p = scp.get("benign_trace", "root_trace")
         benign_trace_c = [x for x in getOrDefault(scp.get, ("benign_trace", "child_trace"), "").split(",") if x]
         benign_trace_ml = scp.get("benign_trace", "modload")
-        benign = Slice(benign_trace_n, benign_trace_p, benign_trace_c, benign_trace_ml)
+        benign = SliceInfo(benign_trace_n, benign_trace_p, benign_trace_c, benign_trace_ml)
 
         error_trace_n = scp.get("error_trace", "name")
         error_trace_p = scp.get("error_trace", "root_trace")
         error_trace_c = [x for x in getOrDefault(scp.get, ("error_trace", "child_trace"), "").split(",") if x]
         error_trace_ml = scp.get("error_trace", "modload")
-        error = Slice(error_trace_n, error_trace_p, error_trace_c, error_trace_ml)
+        error = SliceInfo(error_trace_n, error_trace_p, error_trace_c, error_trace_ml)
 
         run2(cp_trace, align, critical, benign, error, cache=localCache)
 

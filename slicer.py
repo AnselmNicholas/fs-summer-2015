@@ -9,7 +9,7 @@ from tracereader.trace_container import TraceContainerReader
 
 slice_cache = {}
 
-class Slice:
+class SliceInfo:
     def __init__(self, traceName, rootTrace, childTraces, mlfile):
         """
         Input
