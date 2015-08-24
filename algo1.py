@@ -9,6 +9,7 @@ import enhanceLogging
 from misc import execute
 from ConfigParser import SafeConfigParser
 from ConfigParser import NoOptionError
+from slicer import Slice
 
 def fetchMemoryError(trace_error, arch=32, cache=False):
     """Run cp_detect and return result as a list of dict.
@@ -122,7 +123,75 @@ def run(criticalDataFileOrFunctFile, trace_benign, modload_benign, trace_error, 
             criticalDataRst = json.load(f)
             execAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload_error)
 
-def getOrDefault(function,input,defaults):
+def run2(cp_traceIn, alignIn, criticalIn, benignIn, errorIn, cache=False):
+    """
+    cp_trace = scp.get("cp", "trace")
+    align = [align_b, align_e]
+    critical = [critical_data_functions, critical_data_trace, critical_data_binary_file]
+    benign = sliceInfo
+    error = sliceInfo
+    """
+
+    logger = logging.getLogger(__name__)
+
+    sliceStitch = False
+    if benignIn.canStitchSlice():
+        sliceStitch = True
+
+    criticalDataRst = critDataIdentify.run(criticalIn[0], benignIn.getTrace(criticalIn[1]), criticalIn[2])
+
+    for i, function_name in enumerate(criticalDataRst.keys(), 1):
+        for j, call in enumerate(criticalDataRst[function_name].keys(), 1):
+            for k, param in enumerate(criticalDataRst[function_name][call], 1):
+                print "critical data detection: found {} {} {} @ {}".format(function_name, j, call, param)
+
+    memory_error_vertex = fetchMemoryError(errorIn.getTrace(cp_traceIn))
+    for i in memory_error_vertex:
+        print "cp_detection: found error @ {0}".format(i["insn"])
+
+    ain_benign = align.genAIN(benignIn.getTrace(alignIn[0]))
+    ain_error = align.genAIN(errorIn.getTrace(alignIn[1]))
+    processed_align = []
+
+    memory_error_count = len(memory_error_vertex)
+    for h, memory_error_insn in enumerate(memory_error_vertex, 1):
+        logger.info("Processing memory error %i/%i", h, memory_error_count)
+        alignRst = align.runAlign(ain_benign, benignIn.ml, ain_error, errorIn.ml, memory_error_insn["insn"])
+
+        if alignRst in processed_align:
+            logger.info("Skipping - combination has already been processed")
+            continue
+        else:
+            processed_align.append(alignRst)
+            print "aligning: {0} aligned to {1}".format(memory_error_insn["insn"], alignRst)
+
+        function_count = len(criticalDataRst.keys())
+        for i, function_name in enumerate(criticalDataRst.keys(), 1):
+            logger.info("Processing function %i/%i", i, function_count)
+
+            function_call_count = len(criticalDataRst[function_name].keys())
+            for j, call in enumerate(criticalDataRst[function_name].keys(), 1):
+                logger.info("Processing %s call %i/%i", function_name , j, function_call_count)
+
+                function_param_count = len(criticalDataRst[function_name][call])
+                for k, param in enumerate(criticalDataRst[function_name][call], 1):
+                    logger.info("Processing parameter %i/%i", k, function_param_count)
+
+                    insn, espValue = param
+
+                    # corruption_target = runAlgo1(trace_benign, [alignRst[0]], insn)
+                    corruption_target = runAlgo1(benignIn.getTrace(alignIn[0]), [alignRst[0]], insn, sliceStitch=False, sliceInfo=benignIn)
+
+                    if not corruption_target:
+                        print "single stitch candidates selection: {function_name} {call_no} {param_no}: faied to find".format(function_name=function_name, call_no=j, param_no=k)
+                    else:
+                        for l in corruption_target:
+                            print "single stitch candidates selection: {function_name} {call_no} {param_no}: {edge}".format(function_name=function_name, call_no=j, param_no=k, edge=l)
+
+    os.unlink(ain_benign)
+    os.unlink(ain_error)
+
+def getOrDefault(function, input, defaults):
     try:
         return function(*input)
     except NoOptionError:
@@ -184,21 +253,28 @@ def main():
 
         align_b = scp.get("align", "benign")
         align_e = scp.get("align", "error")
+        align = [align_b, align_e]
+
+        cp_trace = scp.get("cp", "trace")
 
         critical_data_functions = scp.get("criticalDataIdentify", "functions")
         critical_data_trace = scp.get("criticalDataIdentify", "trace")
         critical_data_binary_file = scp.get("criticalDataIdentify", "binary")
+        critical = [critical_data_functions, critical_data_trace, critical_data_binary_file]
 
+        benign_trace_n = scp.get("benign_trace", "name")
         benign_trace_p = scp.get("benign_trace", "root_trace")
-        benign_trace_c = getOrDefault(scp.get, ("benign_trace", "child_trace"), "")
-#         benign_trace_c = scp.get("benign_trace", "child_trace", fallback="")
+        benign_trace_c = [x for x in getOrDefault(scp.get, ("benign_trace", "child_trace"), "").split(",") if x]
         benign_trace_ml = scp.get("benign_trace", "modload")
+        benign = Slice(benign_trace_n, benign_trace_p, benign_trace_c, benign_trace_ml)
 
+        error_trace_n = scp.get("error_trace", "name")
         error_trace_p = scp.get("error_trace", "root_trace")
-        error_trace_c = getOrDefault(scp.get, ("error_trace", "child_trace"), "")
+        error_trace_c = [x for x in getOrDefault(scp.get, ("error_trace", "child_trace"), "").split(",") if x]
         error_trace_ml = scp.get("error_trace", "modload")
+        error = Slice(error_trace_n, error_trace_p, error_trace_c, error_trace_ml)
 
-        run(critical_data_functions, benign_trace_p, benign_trace_ml, error_trace_p, error_trace_ml, binary_file=critical_data_binary_file)
+        run2(cp_trace, align, critical, benign, error, cache=localCache)
 
 if __name__ == "__main__":
     main()

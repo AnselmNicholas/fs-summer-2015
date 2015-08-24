@@ -15,14 +15,25 @@ class Slice:
         Input
             traceName = value set in -o flag of gentrace
         """
+        logger = logging.getLogger(__name__)
 
         self.traceName = traceName
         self.rootTrace = rootTrace
         self.childTraces = childTraces
-        self.mlfile = mlfile
+        self.ml = mlfile
 
-        self.forkInfo = self.loadForkData(mlfile)
+        try:
+            self.forkInfo = self.loadForkData(mlfile)
+        except IndexError:
+            logger.warn("Unable to load fork data")
 
+    def canStitchSlice(self):
+        try:
+            self.forkInfo
+            return len(self.childTraces)
+
+        except AttributeError:
+            return False
 
     def loadForkData(self, mlfile):
         logger = logging.getLogger(__name__)
@@ -64,6 +75,8 @@ class Slice:
             return self.rootTrace, parentInsnNo
 
         return parentName + self.traceName, parentInsnNo
+    def getTrace(self, param):
+        return self.rootTrace if param == "p" else self.childTraces[int(param)]
 
 def findParentSliceCandidate(trace, forkInsnNo, memoryLoc, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/", cache=False):
     """Perform the stitching of slice to search for slice candidate in parent trace.
@@ -155,16 +168,16 @@ def slice(trace, insn, index=0, arch=32, followToRoot=False, tname=None, sliceIn
                     tcr = TraceContainerReader(trace)
                     tcr.seek(int(n))
                     f = tcr.get_frame()
-                    
+
                     min_addr = -1
                     for elem in f.std_frame.operand_pre_list.elem:
                         if not elem.operand_info_specific.HasField("mem_operand"): continue
                         if not elem.operand_usage.read: continue
-                        
+
                         current_addr = elem.operand_info_specific.mem_operand.address
                         if min_addr > current_addr or min_addr < 0:
                             min_addr = current_addr
-                    
+
                     min_addr_str = format(min_addr, "x")
 
 
