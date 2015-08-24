@@ -7,8 +7,10 @@ import json
 from stitchAlgo import runAlgo1
 import enhanceLogging
 from misc import execute
+from ConfigParser import SafeConfigParser
+from ConfigParser import NoOptionError
 
-def fetchMemoryError(trace_error, arch=32,cache = False):
+def fetchMemoryError(trace_error, arch=32, cache=False):
     """Run cp_detect and return result as a list of dict.
 
     Executes the following command
@@ -27,7 +29,7 @@ def fetchMemoryError(trace_error, arch=32,cache = False):
     ret = []
     currentVal = None
 
-    rst = execute(cmd,cache)
+    rst = execute(cmd, cache)
 
     for line in rst.splitlines():
         if line[:9] == "arbitrary":
@@ -120,42 +122,83 @@ def run(criticalDataFileOrFunctFile, trace_benign, modload_benign, trace_error, 
             criticalDataRst = json.load(f)
             execAlgo1(criticalDataRst, trace_benign, modload_benign, trace_error, modload_error)
 
+def getOrDefault(function,input,defaults):
+    try:
+        return function(*input)
+    except NoOptionError:
+        return defaults
+
 def main():
     parser = argparse.ArgumentParser(description="")
 
-    parser.add_argument('-dcd', '--detect-critical-data', nargs="?", dest="bin_file" , help="Perform offline critical data detection.")
-    parser.add_argument("critical_data", help="File containing critical data info or funct.txt if -dct flag is used.")
+    subparsers = parser.add_subparsers(help='')
+    base_subparser = argparse.ArgumentParser(add_help=False)
+    base_subparser.add_argument('-v', '--verbose', action='count', default=0)
 
-    parser.add_argument("trace_benign", help="Path to trace file (*.bpt).")
-    parser.add_argument("modload_benign", help="Output of gentrace.")
 
-    parser.add_argument("trace_error", help="Path to trace file (*.bpt).")
-    parser.add_argument("modload_error", help="Output of gentrace.")
+    parser_args = subparsers.add_parser("args", parents=[base_subparser])
+    parser_args.set_defaults(which="args")
 
-    parser.add_argument('-v', '--verbose', action='count', default=0)
+    parser_args.add_argument('-dcd', '--detect-critical-data', nargs="?", dest="bin_file" , help="Perform offline critical data detection.")
+    parser_args.add_argument("critical_data", help="File containing critical data info or funct.txt if -dct flag is used.")
+
+    parser_args.add_argument("trace_benign", help="Path to trace file (*.bpt).")
+    parser_args.add_argument("modload_benign", help="Output of gentrace.")
+
+    parser_args.add_argument("trace_error", help="Path to trace file (*.bpt).")
+    parser_args.add_argument("modload_error", help="Output of gentrace.")
+
+
+    parser_conf = subparsers.add_parser("run", parents=[base_subparser])
+    parser_conf.set_defaults(which="run")
+    parser_conf.add_argument("config", help="input file to run")
+
 
     args = parser.parse_args()
-    if not os.path.exists(args.critical_data):
-        parser.error("critical_data file do not exist");
-    if not os.path.exists(args.trace_benign):
-        parser.error("trace file do not exist");
-    if not os.path.exists(args.modload_benign):
-        parser.error("modload file do not exist");
-    if not os.path.exists(args.trace_error):
-        parser.error("trace file do not exist");
-    if not os.path.exists(args.modload_error):
-        parser.error("modload file do not exist");
-    if not args.bin_file is None:
-        if not os.path.exists(args.bin_file):
-            parser.error("bin file do not exist");        
-    
-
     if args.verbose == 0:logging.basicConfig(level=logging.WARNING)
     elif args.verbose == 1: logging.basicConfig(level=logging.INFO)
     elif args.verbose == 2: logging.basicConfig(level=logging.DEBUG)
     else : logging.basicConfig(level=enhanceLogging.DEBUG_LEVELV_NUM)
 
-    run(args.critical_data, args.trace_benign, args.modload_benign, args.trace_error, args.modload_error, binary_file=args.bin_file)
+    if (args.which == "args"):
+        if not os.path.exists(args.critical_data):
+            parser.error("critical_data file do not exist");
+        if not os.path.exists(args.trace_benign):
+            parser.error("trace file do not exist");
+        if not os.path.exists(args.modload_benign):
+            parser.error("modload file do not exist");
+        if not os.path.exists(args.trace_error):
+            parser.error("trace file do not exist");
+        if not os.path.exists(args.modload_error):
+            parser.error("modload file do not exist");
+        if not args.bin_file is None:
+            if not os.path.exists(args.bin_file):
+                parser.error("bin file do not exist");
+
+        run(args.critical_data, args.trace_benign, args.modload_benign, args.trace_error, args.modload_error, binary_file=args.bin_file)
+    else:
+        scp = SafeConfigParser()
+        scp.read(args.config)
+
+        localCache = scp.getboolean("misc", "cache")
+
+        align_b = scp.get("align", "benign")
+        align_e = scp.get("align", "error")
+
+        critical_data_functions = scp.get("criticalDataIdentify", "functions")
+        critical_data_trace = scp.get("criticalDataIdentify", "trace")
+        critical_data_binary_file = scp.get("criticalDataIdentify", "binary")
+
+        benign_trace_p = scp.get("benign_trace", "root_trace")
+        benign_trace_c = getOrDefault(scp.get, ("benign_trace", "child_trace"), "")
+#         benign_trace_c = scp.get("benign_trace", "child_trace", fallback="")
+        benign_trace_ml = scp.get("benign_trace", "modload")
+
+        error_trace_p = scp.get("error_trace", "root_trace")
+        error_trace_c = getOrDefault(scp.get, ("error_trace", "child_trace"), "")
+        error_trace_ml = scp.get("error_trace", "modload")
+
+        run(critical_data_functions, benign_trace_p, benign_trace_ml, error_trace_p, error_trace_ml, binary_file=critical_data_binary_file)
 
 if __name__ == "__main__":
     main()
