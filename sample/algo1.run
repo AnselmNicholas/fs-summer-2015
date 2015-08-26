@@ -1,0 +1,30 @@
+[misc]
+cache:true
+
+[common]
+
+[cp]
+# p = parent, 0,1,2,3 ... = index of child error
+trace:	p
+
+[align]
+benign:	p
+error:	p
+
+[criticalDataIdentify]
+functions:	funct.txt
+trace:		0
+binary:		sudo.bin
+
+[benign_trace]
+name:		sudo-skip-3.bpt
+modload:	sudo-skip-3.modload
+root_trace:	25480-sudo-skip-3.bpt
+# <child 1> , <child 2> , ... , <child n>
+child_trace:scsudo-skip-3.bpt
+
+[error_trace]
+name:		sudo-err-skip-3-243.bpt
+modload:	sudo-err-skip-3-243.modload
+root_trace:	25508-sudo-err-skip-3-243.bpt
+#child_trace:

@@ -1,0 +1,24 @@
+[misc]
+cache:true
+
+[cp]
+#aligned cp
+insn : 1106195
+trace : p
+
+[vs]
+insn : 1787598 
+index : 1
+trace : p 
+
+[vt]
+insn : 1787632
+index : 0
+trace : p 
+
+[benign_trace]
+#name:
+#modload:
+root_trace : traces/scalign-wuftpd-skiplib-7.bpt
+#child_trace
+
