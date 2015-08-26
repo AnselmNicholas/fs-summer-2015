@@ -3,7 +3,14 @@ import os
 import argparse
 from stitchAlgo import runAlgo2
 import enhanceLogging
-from ConfigParser import SafeConfigParser
+from ConfigParser import SafeConfigParser, NoOptionError
+from slicer import SliceInfo
+
+def getOrDefault(function, input, defaults):
+    try:
+        return function(*input)
+    except NoOptionError:
+        return defaults
 
 def main():
 
@@ -53,17 +60,43 @@ def main():
     else:
         scp = SafeConfigParser()
         scp.read(args.config)
-        
+
         localCache = scp.getboolean("misc", "cache")
-        vS = scp.getint("common", "vs")
-        vsi = scp.getint("common", "vsi")
-        vT = scp.getint("common", "vt")
-        vti = scp.getint("common", "vti")
-        cp = scp.getint("common", "cp")
-        
-        benign_trace = scp.get("benign_trace","root_trace")
-        
-        runAlgo2(benign_trace, [cp], vS, vsi, vT, vti, -1)
+
+        cp_aligned_insn = scp.getint("cp", "insn")
+        cp_trace = getOrDefault(scp.get, ("cp", "trace"), "p")
+        cp = [cp_aligned_insn, cp_trace]
+
+        vs_insn = scp.getint("vs", "insn")
+        vs_index = getOrDefault(scp.getint, ("vs", "index"), 0)
+        vs_trace = getOrDefault(scp.get, ("vs", "trace"), "p")
+        vs = [vs_insn, vs_index, vs_trace]
+
+        vt_insn = scp.getint("vt", "insn")
+        vt_index = getOrDefault(scp.getint, ("vt", "index"), 0)
+        vt_trace = getOrDefault(scp.get, ("vt", "trace"), "p")
+        vt = [vt_insn, vt_index, vt_trace]
+
+        benign_trace_n = getOrDefault(scp.get, ("benign_trace", "name"), "")
+        benign_trace_p = scp.get("benign_trace", "root_trace")
+        benign_trace_c = [x for x in getOrDefault(scp.get, ("benign_trace", "child_trace"), "").split(",") if x]
+        benign_trace_ml = getOrDefault(scp.get, ("benign_trace", "modload"), "")
+        benign = SliceInfo(benign_trace_n, benign_trace_p, benign_trace_c, benign_trace_ml)
+
+        # error_trace_n = getOrDefault(scp.get, ("error_trace", "name"), "")
+        # error_trace_p = scp.get("error_trace", "root_trace")
+        # error_trace_c = [x for x in getOrDefault(scp.get, ("error_trace", "child_trace"), "").split(",") if x]
+        # error_trace_ml = getOrDefault(scp.get("error_trace", "modload"), "")
+        # error = SliceInfo(error_trace_n, error_trace_p, error_trace_c, error_trace_ml)
+
+        sliceStitch = False
+        if benign.canStitchSlice():
+            sliceStitch = True
+
+        if sliceStitch:
+            runAlgo2(benign.getTrace(vt[2]), [(benign.getNameK(cp[1]), cp[0])], (benign.getNameK(vs[2]), vs[0]), vs[1], (benign.getNameK(vt[2]), vt[0]), vt[1], -1, benign.getTrace(vs[2]), sliceStitch, sliceInfo=benign)
+        else:
+            runAlgo2(benign.getTrace(vt[2]), [cp[0]], vs[0], vs[1], vt[0], vt[1], -1)
 
 
 if __name__ == "__main__":

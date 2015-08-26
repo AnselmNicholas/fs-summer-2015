@@ -21,10 +21,11 @@ class SliceInfo:
         self.childTraces = childTraces
         self.ml = mlfile
 
-        try:
-            self.forkInfo = self.loadForkData(mlfile)
-        except IndexError:
-            logger.warn("Unable to load fork data")
+        if not mlfile == "":
+            try:
+                self.forkInfo = self.loadForkData(mlfile)
+            except IndexError:
+                logger.warn("Unable to load fork data")
 
     def canStitchSlice(self):
         try:
@@ -49,35 +50,82 @@ class SliceInfo:
                     forkInfo[forkname] = parentinsn
         return forkInfo
 
-    def getNameK(self, param):
+    def getTracePath(self, fileNameHeader):
+        """return full path to a trace given the file name header"""
 
+        inputFileName = fileNameHeader + self.traceName
+
+        rootTraceName = self.rootTrace.split("/")[-1].split("\\")[-1]
+        if rootTraceName == inputFileName:
+            return rootTraceName
+
+        for childTraceName in self.childTraces:
+            ctn = childTraceName.split("/")[-1].split("\\")[-1]
+            if ctn == inputFileName:
+                return childTraceName
+
+        raise Exception("Trace not found")
+
+    def getNameK(self, param):
+        """Returns file name header of the trace
+
+        Input
+            param: index of child trace or `p`
+        """
         return self.getName(self.getTrace(param))
 
     def getName(self, tracename):
+        """Returns file name header of the trace
+
+        Input
+            tracename: name of trace file
+        """
         logger = logging.getLogger(__name__)
+
+        tracename = tracename.split("/")[-1].split("\\")[-1]
+
         return tracename[:-len(self.traceName)]
+
+    def getParent(self, fileNameHeader):
+        """
+        get parent info given file header
+        returns <full path to tracee>, fork insn
+        """
+
+        parentNameHeader = fileNameHeader[:-1]
+
+        parentInsnNo = self.forkInfo[parentNameHeader + "p"]
+
+        while parentNameHeader[-1] == "p":
+            parentNameHeader = parentNameHeader[:-1]
+
+        if (parentNameHeader == "s"):
+            return self.rootTrace, parentInsnNo
+
+        return self.getTracePath(parentNameHeader), parentInsnNo
 
 
     def getParentTraceName(self, tracename):
+        """
+        get parent info given file name
+        returns <full path to tracee>, fork insn
+        """
         logger = logging.getLogger(__name__)
         # print tracename, binaryName
+
+        tracename = tracename.split("/")[-1].split("\\")[-1]
+
         if not  tracename[-len(self.traceName):] == self.traceName:
             raise Exception("unable to determine parent trace name as trace name {} does not end with binary name {}".format(tracename, self.traceName))
 
         if tracename == self.rootTrace:  # No parent
             return None
 
-        parentName = tracename[:-len(self.traceName)][:-1]
+        fileNameHeader = tracename[:-len(self.traceName)]
 
-        parentInsnNo = self.forkInfo[parentName + "p"]
 
-        while parentName[-1] == "p":
-            parentName = parentName[:-1]
+        return self.getParent(fileNameHeader)
 
-        if (parentName == "s"):
-            return self.rootTrace, parentInsnNo
-
-        return parentName + self.traceName, parentInsnNo
     def getTrace(self, param):
         return self.rootTrace if param == "p" else self.childTraces[int(param)]
 

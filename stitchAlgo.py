@@ -37,7 +37,23 @@ def isVPUsedToWriteV(trace, insn, bindir=os.path.dirname(os.path.realpath(__file
         logger.error("Unknown return: " + rst)
         raise Exception("Unknown return: " + rst)
 
-def isAliveAt(trace, start, end, address, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/", cache=False):
+def isAliveAt(trace, start, end, address, sliceStitch=False, sliceInfo=None, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/", cache=False):
+    if not sliceStitch:
+        return isAliveAtBin(trace, start, end, address, bindir=bindir, cache=cache)
+
+    startt, start = start
+    startt = sliceInfo.getTracePath(startt)
+    endt, end = end
+    endt = sliceInfo.getTracePath(endt)
+
+    while not startt == endt:
+        if not isAliveAtBin(endt, 0, end, address, bindir=bindir, cache=cache): return False
+        endt, end = sliceInfo.getParentTraceName(endt)
+
+    return isAliveAtBin(endt, start, end, address, bindir=bindir, cache=cache)
+
+
+def isAliveAtBin(trace, start, end, address, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/", cache=False):
     """
     Check address has been written to from insn start to insn end
 
@@ -196,7 +212,7 @@ def runAlgo1(G, I, vT, sliceStitch=False, sliceInfo=None):
                 if pt == it and p < i and i < forkins:
                     logger.info("Possible edge in parent: {} {} {}".format(po, co, mem))
                     result.append([po, co, mem])
-                elif ct == it and i < c:
+                elif ct == it and i < c:  # 0 < i is assumed to be true
                     logger.info("Possible edge in child: {} {} {}".format(po, co, mem))
                     result.append([po, co, mem])
 
@@ -212,7 +228,7 @@ def runAlgo1(G, I, vT, sliceStitch=False, sliceInfo=None):
     return result
 
 
-def runAlgo2(G, I, vS, vsi, vT, vti, cp):
+def runAlgo2(Gt, I, vS, vsi, vT, vti, cp, Gs=None, sliceStitch=False, sliceInfo=None):
     """
 
     Input:
@@ -243,11 +259,28 @@ def runAlgo2(G, I, vS, vsi, vT, vti, cp):
 
     # End of inpt args
 
-    tdtrace = G
-    sdtrace = G
+    tdtrace = Gt
+    sdtrace = Gs if not Gs == None else Gt
 
-    tdslice = slicer.get(G, vT, vti)
-    sdslice = slicer.get(G, vS, vsi)
+
+
+    vTi = vT
+    vTs = vT
+    vSi = vS
+    vSs = vS
+    if sliceStitch:
+        _, vTi = vT
+        vTs = "{}:{}".format(*vT)
+        vSs = "{}:{}".format(*vS)
+
+    tdslice = slicer.get(tdtrace, vTi, vti, sliceStitch=sliceStitch, sliceInfo=sliceInfo)
+    sdslice = slicer.get(sdtrace, vSi, vsi, sliceStitch=sliceStitch, sliceInfo=sliceInfo)
+
+
+    if sliceStitch:
+        it, i = I[0]
+    else:
+        i = I[0]
 
     # memoryErrorPt = alignrst[0]
 
@@ -259,29 +292,79 @@ def runAlgo2(G, I, vS, vsi, vT, vti, cp):
     TDFlow = pgv.AGraph(tdslice)
 
     print "Algo 2A"
-    for V in getEdges(TDFlow, vT):
-        p = int(V[0])
-        c = int(V[1])
+    for V in getEdges(TDFlow, vTs):
+        if sliceStitch:
+            po = V[0]
+            pt, p = po.split(":", 1)
+            p = int(p)
+            co = V[1]
+            ct, c = co.split(":", 1)
+            c = int(c)
 
-        mem = V.attr["label"]
+            mem = V.attr["label"]
+            passtru = False
+            if mem.startswith("passtru"):  # passtru:805c800:1089664
+                _, mem, forkins = mem.split(":", 2)
+                passtru = True
+        else:
+            po = p = int(V[0])
+            co = c = int(V[1])
+            mem = V.attr["label"]
+
         if isRegister(mem): continue  # 7
 
-        if I[0] > c:  continue  # 8
+        if sliceStitch:
+            currentTraceHeader = ct
+            curentInsn = c
+            while not currentTraceHeader == it:
+                currentTraceHeader, curentInsn = sliceInfo.getParent(currentTraceHeader)
+                currentTraceHeader = sliceInfo.getName(currentTraceHeader)
+
+            if i > curentInsn: continue  # 8  Skip due to line 8 or time ambiguity
+        else:
+            if i > c:  continue  # 8
 
         if isVPUsedToWriteV(tdtrace, c): continue  # 10
 
-        vpp = getVPP(tdtrace, c)
+        vpp = getVPP(tdtrace, c)  # sliceStitch shouldnt need to join
         if vpp[0] in ["ESP", "EBP"]: continue  # Unable to determine vpp
 
-        logger.info("Possible edge: {} {} {}".format(p, c, mem))
+        if sliceStitch:
+            vpp[0] = (ct, vpp[0])
 
-        for vs in getEdges(SDFlow, vS):
+        logger.info("Possible edge: {} {} {}".format(po, co, mem))
+
+        for vs in getEdges(SDFlow, vSs):
             logger.debug("proc SDFlow edge {} {}".format(vs, vs.attr["label"]))
-            if isRegister(vs.attr["label"]): continue
-            if not isAliveAt(tdtrace, int(vs[0]), c, vs.attr["label"]): continue
+            if sliceStitch:
+                vspo = vs[0]
+                vspt, vsp = vspo.split(":", 1)
+                vsp = int(vsp)
+                vsco = vs[1]
+                vsct, vsc = vsco.split(":", 1)
+                vsc = int(vsc)
+
+                vsmem = vs.attr["label"]
+                vspasstru = False
+                if vsmem.startswith("passtru"):  # passtru:805c800:1089664
+                    _, vsmem, forkins = vsmem.split(":", 2)
+                    vspasstru = True
+            else:
+                vspo = vsp = int(vs[0])
+                vsco = vsc = int(vs[1])
+                vsmem = vs.attr["label"]
+
+            if isRegister(vsmem): continue
+
+            if sliceStitch:
+                if not isAliveAt(tdtrace, (vspt, vsp), (ct, c), vsmem, sliceStitch=sliceStitch, sliceInfo=sliceInfo): continue
+            else:
+                if not isAliveAt(tdtrace, vsp, c, vsmem): continue
 
             print "VPP = {}, VP = {}, VP.addr = {},  VS = {}, VS.addr = {}".format(vpp, V, V.attr["label"], vs, vs.attr["label"])
-            corruption_target = runAlgo1(G, I, vpp[0])
+
+            corruption_target = runAlgo1(sliceInfo.getTracePath(ct) if sliceStitch else tdtrace, I, vpp[0], sliceStitch=sliceStitch, sliceInfo=sliceInfo)
+
             if not corruption_target:
                 print "single stitch candidates selection: faied to find"
             else:
@@ -290,34 +373,99 @@ def runAlgo2(G, I, vS, vsi, vT, vti, cp):
 
 
     print "Algo 2B"
-    for V in getEdges(SDFlow, vS):
-        p = int(V[0])
-        c = int(V[1])
+    for V in getEdges(SDFlow, vSs):
+        if sliceStitch:
+            po = V[0]
+            pt, p = po.split(":", 1)
+            p = int(p)
+            co = V[1]
+            ct, c = co.split(":", 1)
+            c = int(c)
 
-        mem = V.attr["label"]
+            mem = V.attr["label"]
+            passtru = False
+            if mem.startswith("passtru"):  # passtru:805c800:1089664
+                _, mem, forkins = mem.split(":", 2)
+                passtru = True
+        else:
+            po = p = int(V[0])
+            co = c = int(V[1])
+            mem = V.attr["label"]
+
         if isRegister(mem): continue  # 15
 
-        if p < min(I) :  continue  # 16
+        # if p < min(I) :  continue  # 16
+
+        if sliceStitch:
+            currentTraceHeader = pt
+            curentInsn = p
+            while not currentTraceHeader == it:
+                currentTraceHeader, curentInsn = sliceInfo.getParent(currentTraceHeader)
+                currentTraceHeader = sliceInfo.getName(currentTraceHeader)
+
+            if curentInsn < i: continue  # 16
+        else:
+            if p < i :  continue  # 16
+
+
 
         if not isVPUsedToWriteV(sdtrace, c): continue  # 18
 
         vpp = getVPP(tdtrace, c)
         if vpp[0] in ["ESP", "EBP"]: continue  # Unable to determine vpp
 
-        logger.info("Possible edge: {} {} {}".format(p, c, mem))
+        if sliceStitch:
+            vpp[0] = (pt, vpp[0])
+
+        logger.info("Possible edge: {} {} {}".format(po, co, mem))
 #
         # for vt in TDFlow.edges_iter():
-        for vt in getEdges(TDFlow, vT):
+        for vt in getEdges(TDFlow, vTs):
             logger.debug("proc TDFlow edge {} {}".format(vt, vt.attr["label"]))
-            if isRegister(vt.attr["label"]): continue
 
-            vt_time = int(vt[0])
-            vprime_time = int(vt[1])
-            logger.debug("{} < {} < {} : {}".format(vt_time, c, vprime_time, vt_time < c and c < vprime_time))
-            if not (vt_time < c and c < vprime_time): continue
+            if sliceStitch:
+                vtpo = vt[0]
+                vtpt, vtp = vtpo.split(":", 1)
+                vtp = int(vtp)
+                vtco = vt[1]
+                vtct, vtc = vtco.split(":", 1)
+                vtc = int(vtc)
+
+                vtmem = vt.attr["label"]
+                vtpasstru = False
+                if vtmem.startswith("passtru"):  # passtru:805c800:1089664
+                    _, vtmem, forkins = vtmem.split(":", 2)
+                    vtpasstru = True
+            else:
+                vtpo = vtp = int(vt[0])
+                vtco = vtc = int(vt[1])
+                vtmem = vt.attr["label"]
+
+
+            if isRegister(vtmem): continue
+
+            vt_time = vtp
+            vprime_time = vtc
+
+            if sliceStitch:
+                logger.debug("{} < {} < {}".format(vtpo, co, vtco))
+                if passtru:
+                    if vtpt == ct:
+                        if not (vt_time < c and c < forkins):continue
+                    elif ct == vtct:
+                        if not (c < vprime_time):continue  # 0 < c is assumed to be true
+                    else:
+                        continue  # Confirm skippable as the trace header is different thus not between 2 trace
+                else:
+                    if not (vtpt == ct and vt_time < c and c < vprime_time): continue
+            else:
+                logger.debug("{} < {} < {} : {}".format(vtpo, co, vtco, vt_time < c and c < vprime_time))
+                if not (vt_time < c and c < vprime_time): continue
 
             print "VPP = {}, VP = {}, VP.addr = {}, VT = {} VT.addr = {}".format(vpp, V, V.attr["label"], vt, vt.attr["label"])
-            corruption_target = runAlgo1(G, I, vpp[0])
+
+            corruption_target = runAlgo1(sliceInfo.getTracePath(ct) if sliceStitch else sdtrace, I, vpp[0], sliceStitch=sliceStitch, sliceInfo=sliceInfo)
+
             if not corruption_target:
                 print "single stitch candidates selection: faied to find"
             else:
