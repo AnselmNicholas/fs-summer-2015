@@ -267,7 +267,6 @@ def slice(trace, insn, index=0, arch=32, followToRoot=False, tname=None, sliceIn
 
                 ret.add_edge("{}:{}".format(parentTraceHead, sliceCandidate[0]), "{}:{}".format(tname, n), key=None, label="passtru:{}:{}".format(min_addr_str, parentTrace[1]), color="blue", style="bold")
 
-
     return ret.to_string()
 
 def sliceSingle(trace, insn, index=0, arch=32, cache=False):

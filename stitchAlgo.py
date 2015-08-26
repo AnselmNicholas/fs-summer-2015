@@ -103,8 +103,8 @@ def getVPP(trace, insn, bindir=os.path.dirname(os.path.realpath(__file__)) + "/b
     vppRst = rst.split(" ", 1)
 
     if vppRst[0] == "err":
-        logger.error("Unknown return: " + rst)
-        raise Exception("Unknown return: " + rst)
+        logger.error("VPP not found: " + rst)
+        raise Exception("VPP not found: " + rst)
     return vppRst
 
 def getEdges(graph, src):
@@ -270,11 +270,14 @@ def runAlgo2(Gt, I, vS, vsi, vT, vti, cp, Gs=None, sliceStitch=False, sliceInfo=
     vSs = vS
     if sliceStitch:
         _, vTi = vT
+        _, vSi = vS
         vTs = "{}:{}".format(*vT)
         vSs = "{}:{}".format(*vS)
 
     tdslice = slicer.get(tdtrace, vTi, vti, sliceStitch=sliceStitch, sliceInfo=sliceInfo)
+    logger.debugv("Combined tdslice:\n" + tdslice)
     sdslice = slicer.get(sdtrace, vSi, vsi, sliceStitch=sliceStitch, sliceInfo=sliceInfo)
+    logger.debugv("Combined sdslice:\n" + sdslice)
 
 
     if sliceStitch:

@@ -234,7 +234,7 @@ void print_all(const char *f, uint64_t frameNo) {
 //	}
 
 	if (reg.length() == 0) {
-		std::cout << "err " << frameNo << std::endl;
+		std::cout << "err " << frameNo << " no base register that hold vp"<< std::endl;
 		return;
 	}
 
