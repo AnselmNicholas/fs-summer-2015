@@ -229,9 +229,10 @@ def slice(trace, insn, index=0, arch=32, followToRoot=False, tname=None, sliceIn
                         if min_addr > current_addr or min_addr < 0:
                             min_addr = current_addr
 
+                    if min_addr == -1:
+                        logger.debug("Unable to determine parent address for root node.")
+                        continue
                     min_addr_str = format(min_addr, "x")
-
-
 
                 else:
                     min_addr = -1
