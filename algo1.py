@@ -10,6 +10,7 @@ from misc import execute
 from ConfigParser import SafeConfigParser
 from ConfigParser import NoOptionError
 from slicer import SliceInfo
+import misc, string
 
 def fetchMemoryError(trace_error, arch=32, cache=False):
     """Run cp_detect and return result as a list of dict.
@@ -28,29 +29,44 @@ def fetchMemoryError(trace_error, arch=32, cache=False):
     logger.debug("Executing command: " + cmd)
 
     ret = []
-    currentVal = None
 
     rst = execute(cmd, cache)
 
-    for line in rst.splitlines():
+    rst = misc.Lookahead(rst.splitlines())
+
+    for line in rst:
+        logger.debugv(line)
         if line[:9] == "arbitrary":
-            if currentVal is not None:
-                ret.append(currentVal)
-            currentVal = {}
-            continue
+            currentVal = {"mode":"arbitrary", "arbitrary":line[10:][:-2]} # -2 to remove ":\n"
+            while rst.lookahead() is not None and rst.lookahead()[0] == "\t":
+                line = rst.next()
+                logger.debugv(line)
 
-        line = line.split(":", 1)
+                line = line.split(":", 1)
 
-        if line[0] == "\tbase memory reg":
-            currentVal["baseMemoryReg"] = line[1]
-        elif line[0] == '\tindex memory reg':
-            currentVal["indexMemoryReg"] = line[1]
-        elif line[0] == '\tvalue  reg':
-            currentVal["valueReg"] = line[1]
-        elif line[0] == "\tinsn":
-            insn, addr = line[1].split()
-            currentVal["insn"] = int(insn)
-            currentVal["insnAddr"] = addr
+                if line[0] == "\tbase memory reg":
+                    currentVal["baseMemoryReg"] = line[1]
+                elif line[0] == '\tindex memory reg':
+                    currentVal["indexMemoryReg"] = line[1]
+                elif line[0] == '\tvalue  reg':
+                    currentVal["valueReg"] = line[1]
+                elif line[0] == "\tinsn":
+                    insn, addr = line[1].split()
+                    currentVal["insn"] = int(insn)
+                    currentVal["insnAddr"] = addr
+                else:
+                    logger.warning("Unhandled cp_detect output: %s", line)
+        elif line[:5] == "Found":
+            currentVal = {"mode":"Found", "mesage":line, "insnWrite":[]}
+            while rst.lookahead() is not None and rst.lookahead()[0] in string.digits:
+                logger.debugv(rst.lookahead())
+                insn, addr = rst.next().split()
+                insn = int(insn)
+
+                currentVal["insnWrite"].append((insn, addr))
+
+                currentVal["insn"] = insn
+                currentVal["insnAddr"] = addr
         else:
             logger.warning("Unhandled cp_detect output: %s", line)
 
