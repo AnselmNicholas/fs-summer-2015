@@ -79,13 +79,13 @@ def main():
 
         benign_trace_n = getOrDefault(scp.get, ("benign_trace", "name"), "")
         benign_trace_p = scp.get("benign_trace", "root_trace")
-        benign_trace_c = [x for x in getOrDefault(scp.get, ("benign_trace", "child_trace"), "").split(",") if x]
+        benign_trace_c = [x.strip() for x in getOrDefault(scp.get, ("benign_trace", "child_trace"), "").split(",") if x]
         benign_trace_ml = getOrDefault(scp.get, ("benign_trace", "modload"), "")
         benign = SliceInfo(benign_trace_n, benign_trace_p, benign_trace_c, benign_trace_ml)
 
         # error_trace_n = getOrDefault(scp.get, ("error_trace", "name"), "")
         # error_trace_p = scp.get("error_trace", "root_trace")
-        # error_trace_c = [x for x in getOrDefault(scp.get, ("error_trace", "child_trace"), "").split(",") if x]
+        # error_trace_c = [x.strip() for x in getOrDefault(scp.get, ("error_trace", "child_trace"), "").split(",") if x]
         # error_trace_ml = getOrDefault(scp.get("error_trace", "modload"), "")
         # error = SliceInfo(error_trace_n, error_trace_p, error_trace_c, error_trace_ml)
 
