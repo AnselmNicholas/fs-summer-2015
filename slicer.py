@@ -39,11 +39,15 @@ class SliceInfo:
         logger = logging.getLogger(__name__)
         forkInfo = {}
         with open(mlfile) as f:
-
             for line in f:
                 line = line.strip()
-                l = line.split()
+                
+                if not line:
+                    continue
+                
+                l = line.split()                
                 if l[0] == "Spawning" and l[1] == "parent:":
+                    logger.debugv(l)
 
                     forkname = l[3]
                     parentinsn = l[6]
