@@ -305,7 +305,7 @@ def runAlign(infile1, mlfile1, infile2, mlfile2, targetinsn, writediffresult=Fal
     logger.info("Offset for mapping error to benign is {0}".format(ofst))
     if ofst == invalidOffset:
         logger.warn("Unable to determine align offset")
-        raise Exception("Unable to determine align offset")
+        #raise Exception("Unable to determine align offset")
         return ofst, ofst
 
     functionNo = idx + ofst

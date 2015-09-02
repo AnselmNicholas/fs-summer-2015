@@ -70,7 +70,7 @@ def fetchMemoryError(trace_error, arch=32, cache=False):
         else:
             logger.warning("Unhandled cp_detect output: %s", line)
 
-    ret.append(currentVal)
+        ret.append(currentVal)
 
     return ret
 
@@ -173,6 +173,10 @@ def run2(cp_traceIn, alignIn, criticalIn, benignIn, errorIn, cache=False):
     for h, memory_error_insn in enumerate(memory_error_vertex, 1):
         logger.info("Processing memory error %i/%i", h, memory_error_count)
         alignRst = align.runAlign(ain_benign, benignIn.ml, ain_error, errorIn.ml, memory_error_insn["insn"])
+
+        if alignRst[0] == align.invalidOffset:
+            logger.info("Skipping - unable to determine corresponding instruction in benign trace")
+            continue
 
         if alignRst in processed_align:
             logger.info("Skipping - combination has already been processed")

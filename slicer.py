@@ -25,7 +25,7 @@ class SliceInfo:
             try:
                 self.forkInfo = self.loadForkData(mlfile)
             except IndexError:
-                logger.warn("Unable to load fork data")
+                logger.warn("Unable to load fork data of " + mlfile)
 
     def canStitchSlice(self):
         try:
