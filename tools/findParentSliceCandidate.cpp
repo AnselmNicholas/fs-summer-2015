@@ -61,7 +61,10 @@ void process(const char *f, uint64_t frameNo, uint64_t target) {
 			if (hasResult(pad_frames->at(i), target)) return;
 	}
 
-	if (!ctr) return;
+	if (!ctr) {
+		std::cout << "err err" << std::endl;
+		return;
+	}
 
 	uint64_t multiple = ctr / ALIGN_SIZE;
 	ctr -= ALIGN_SIZE;
