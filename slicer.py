@@ -41,11 +41,11 @@ class SliceInfo:
         with open(mlfile) as f:
             for line in f:
                 line = line.strip()
-                
+
                 if not line:
                     continue
-                
-                l = line.split()                
+
+                l = line.split()
                 if l[0] == "Spawning" and l[1] == "parent:":
                     logger.debugv(l)
 
@@ -115,7 +115,10 @@ class SliceInfo:
         returns <full path to tracee>, fork insn
         """
         logger = logging.getLogger(__name__)
-        # print tracename, binaryName
+        # print tracename, self.rootTrace
+
+        if tracename == self.rootTrace:
+            return None
 
         tracename = tracename.split("/")[-1].split("\\")[-1]
 
@@ -149,9 +152,12 @@ def findParentSliceCandidate(trace, forkInsnNo, memoryLoc, bindir=os.path.dirnam
 
     rst = rst.split()
 
-    if not rst or rst[0] == "err":
+    if not rst :
         logger.error("Error in command: " + cmd)
         raise Exception("Error executing command: " + cmd)
+
+    if rst[0] == "err":
+        return -1
 
     return rst
 
@@ -251,10 +257,29 @@ def slice(trace, insn, index=0, arch=32, followToRoot=False, tname=None, sliceIn
                 memoryLoc = min_addr_str
 
 
-                sliceCandidate = findParentSliceCandidate(parentTrace[0], parentTrace[1], memoryLoc, cache=cache)
-                logger.debug("Slice candidate {}".format(sliceCandidate))
+                slicingTrace = parentTrace
+                # Determining slice candidate
+                sliceCandidate = -1
+#                 sliceCandidate = findParentSliceCandidate(parentTrace[0], parentTrace[1], memoryLoc, cache=cache)
+#                 logger.debug("Slice candidate {}".format(sliceCandidate))
+#                 cparentTrace = parentTrace
+                while sliceCandidate == -1:
+                    # cparentTrace = parentTrace
+                    sliceCandidate = findParentSliceCandidate(slicingTrace[0], slicingTrace[1], memoryLoc, cache=cache)
+                    if not sliceCandidate == -1:
+                        logger.debug("Slice candidate {}".format(sliceCandidate))
+                    else:
+                        logger.info("Unable to find memory location in parent trace. Trying grandparent trace")
+                        cTraceName = slicingTrace[0]
+                        slicingTrace = sliceInfo.getParentTraceName(slicingTrace[0])
+                        logger.info("Grandparent trace of {} is {}".format(cTraceName, slicingTrace))
+                        if slicingTrace is None:
+                            break
 
-                g2 = slice(parentTrace[0], sliceCandidate[0], sliceCandidate[1], followToRoot=followToRoot, tname=None, sliceInfo=sliceInfo, cache=cache)
+                if sliceCandidate == -1:
+                    continue
+
+                g2 = slice(slicingTrace[0], sliceCandidate[0], sliceCandidate[1], followToRoot=followToRoot, tname=None, sliceInfo=sliceInfo, cache=cache)
                 g2 = pgv.AGraph(g2)
                 for vtx in g2.iternodes():
                     ret.add_node(vtx.name, **vtx.attr)
@@ -265,12 +290,12 @@ def slice(trace, insn, index=0, arch=32, followToRoot=False, tname=None, sliceIn
 
                 # ret.add_node("{}:{}".format(tname, 0), label="{}:{}".format(tname, "0"))
 
-                parentTraceHead = sliceInfo.getName(parentTrace[0])
-                # ret.add_edge("{}:{}".format(parentTraceHead, sliceCandidate[0]), "{}:{}".format(parentTraceHead, parentTrace[1]), key=None, label=min_addr_str, color="red", style="bold")
-                # ret.add_edge("{}:{}".format(parentTraceHead, parentTrace[1]), "{}:{}".format(tname, 0), key=None, label="passthru", color="blue", style="bold")
+                parentTraceHead = sliceInfo.getName(slicingTrace[0])
+                # ret.add_edge("{}:{}".format(parentTraceHead, sliceCandidate[0]), "{}:{}".format(parentTraceHead, slicingTrace[1]), key=None, label=min_addr_str, color="red", style="bold")
+                # ret.add_edge("{}:{}".format(parentTraceHead, slicingTrace[1]), "{}:{}".format(tname, 0), key=None, label="passthru", color="blue", style="bold")
                 # ret.add_edge("{}:{}".format(tname, 0), "{}:{}".format(tname, n), key=None, label=min_addr_str, color="red", style="bold")
 
-                ret.add_edge("{}:{}".format(parentTraceHead, sliceCandidate[0]), "{}:{}".format(tname, n), key=None, label="passtru:{}:{}".format(min_addr_str, parentTrace[1]), color="blue", style="bold")
+                ret.add_edge("{}:{}".format(parentTraceHead, sliceCandidate[0]), "{}:{}".format(tname, n), key=None, label="passtru:{}:{}".format(min_addr_str, slicingTrace[1]), color="blue", style="bold")
 
     return ret.to_string()
 
