@@ -162,7 +162,7 @@ def findParentSliceCandidate(trace, forkInsnNo, memoryLoc, bindir=os.path.dirnam
     return rst
 
 
-def get(trace, insn, index=0, sliceStitch=False, sliceInfo=None):
+def get(trace, insn, index=0, sliceStitch=False, sliceInfo=None, cache=False):
     """Fetch slice result from cache perform a slice
     """
     logger = logging.getLogger(__name__)
@@ -171,7 +171,7 @@ def get(trace, insn, index=0, sliceStitch=False, sliceInfo=None):
     slicedDFG = slice_cache.get((trace, insn, index, sliceStitch), None)
 
     if slicedDFG is None:
-        slicedDFG = slice(trace, insn, index, followToRoot=sliceStitch, sliceInfo=sliceInfo)
+        slicedDFG = slice(trace, insn, index, followToRoot=sliceStitch, sliceInfo=sliceInfo, cache=cache)
         slice_cache[(trace, insn, index, sliceStitch)] = slicedDFG
 
     return slicedDFG
@@ -187,7 +187,7 @@ def slice(trace, insn, index=0, arch=32, followToRoot=False, tname=None, sliceIn
 
     if not followToRoot:
         logger.info("Performing single slice")
-        return sliceSingle(trace, insn, index, arch)
+        return sliceSingle(trace, insn, index, arch, cache=cache)
 
     logger.info("Performing stitch slice")
 

@@ -31,6 +31,7 @@ class Lookahead:
         return self.buffer[n]
 
 def getTempFileName(cmd):
+    logger = logging.getLogger(__name__)
     cacheFolder = "tmp/"
     invalidChars = '\/:*?"<>|'
 
@@ -53,39 +54,39 @@ def getTempFileName(cmd):
                 raise
 
 
-    logging.info("Cache file name generated {0}".format(fullpath))
+    logger.info("temp file name generated {0}".format(fullpath))
 
     return fullpath
 
-def execute(cmd, cache=False):
-
-    # testing
-    cache = True
+def execute(cmd, cache=False, stderrToNull=False):
 
     if (cache):
         ic = interimCache(cmd)
         if ic.exist(): return ic.load()
 
-    rst = executeCommand(cmd)
+    rst = executeCommand(cmd, stderrToNull=stderrToNull)
 
     if (cache):
         ic.save(rst)
 
     return rst
 
-def executeCommand(cmd):
+def executeCommand(cmd, stderrToNull=False):
     """Executes the input command
     """
     logger = logging.getLogger(__name__)
 
     logger.debug("Executing command: " + cmd)
 
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+    if stderrToNull:
+        try:  # https://gist.github.com/ajdavis/6222554
+            from subprocess import DEVNULL  # Python 3.
+        except ImportError:
+            DEVNULL = open(os.devnull, 'wb')
+        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=DEVNULL, close_fds=True)
+    else:
+        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, close_fds=True)
 
-    stderr = p.stderr
-    with stderr as err_result:
-        err_rst = err_result.read().strip()
-        logger.debugv("Result ERR:\n%s", err_rst)
     stdout = p.stdout
     with stdout as result:
         rst = result.read().strip()

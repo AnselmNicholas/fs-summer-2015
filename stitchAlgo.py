@@ -147,7 +147,7 @@ def prepForSMT(trace, insn, sliceInsnList, bindir=os.path.dirname(os.path.realpa
 
     cmd = "{bindir}prepForSMT {trace} {sliceInsnList} {outputTrace}".format(bindir=bindir, trace=trace, sliceInsnList=sliceInsnList, outputTrace=outputFileName)
 
-    rst = execute(cmd, cache)
+    rst = execute(cmd, cache, False)
 
     logger.info("Trace {} trimmed to {}.".format(trace, outputFileName))
 
@@ -174,7 +174,9 @@ def generateFormula(slicedTrace, solver="z3", cache=False):
 
     cmd = "iltrans -trace {trace} -trace-solver {solver} -trace-formula {output}".format(trace=slicedTrace, solver=solver, output=outputFileName)
 
-    rst = execute(cmd, cache)
+    rst = execute(cmd, cache, True)
+
+    print rst
 
     with open(outputFileName) as f:
         contents = f.readlines()
@@ -256,7 +258,7 @@ def getEdges(graph, src):
             yield edges[parent][addr]
 
 
-def runAlgo1(G, I, vT, sliceStitch=False, sliceInfo=None):
+def runAlgo1(G, I, vT, sliceStitch=False, sliceInfo=None, cache=False):
     """
 
     Input:
@@ -276,7 +278,7 @@ def runAlgo1(G, I, vT, sliceStitch=False, sliceInfo=None):
     if sliceStitch:
         _, vTi = vT
         vTs = "{}:{}".format(*vT)
-    tdslice = slicer.get(G, vTi, sliceStitch=sliceStitch, sliceInfo=sliceInfo)
+    tdslice = slicer.get(G, vTi, sliceStitch=sliceStitch, sliceInfo=sliceInfo, cache=cache)
 
     TDFlow = pgv.AGraph(tdslice)
 
@@ -286,8 +288,8 @@ def runAlgo1(G, I, vT, sliceStitch=False, sliceInfo=None):
         i = I[0]
 
     sliceInsnList = exportSlicedInsn(TDFlow, G, vTi)
-    slicedTrace = prepForSMT(G, vTi, sliceInsnList)
-    formula = generateFormula(slicedTrace)
+    slicedTrace = prepForSMT(G, vTi, sliceInsnList, cache=False)
+    formula = generateFormula(slicedTrace, cache=False)
     solveFormula(formula)
 
     for V in getEdges(TDFlow, vTs):

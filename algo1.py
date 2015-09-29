@@ -161,12 +161,12 @@ def run2(cp_traceIn, alignIn, criticalIn, benignIn, errorIn, cache=False):
             for k, param in enumerate(criticalDataRst[function_name][call], 1):
                 print "critical data detection: found {} {} {} @ {}".format(function_name, j, call, param)
 
-    memory_error_vertex = fetchMemoryError(errorIn.getTrace(cp_traceIn))
+    memory_error_vertex = fetchMemoryError(errorIn.getTrace(cp_traceIn), cache=cache)
     for i in memory_error_vertex:
         print "cp_detection: found error @ {0}".format(i["insn"])
 
-    ain_benign = align.genAIN(benignIn.getTrace(alignIn[0]))
-    ain_error = align.genAIN(errorIn.getTrace(alignIn[1]))
+    ain_benign = align.genAIN(benignIn.getTrace(alignIn[0]), cache=cache)
+    ain_error = align.genAIN(errorIn.getTrace(alignIn[1]), cache=cache)
     processed_align = []
 
     memory_error_count = len(memory_error_vertex)
@@ -200,9 +200,9 @@ def run2(cp_traceIn, alignIn, criticalIn, benignIn, errorIn, cache=False):
                     insn, espValue = param
 
                     if sliceStitch:
-                        corruption_target = runAlgo1(benignIn.getTrace(criticalIn[1]), [(benignIn.getNameK(alignIn[0]), alignRst[0])], (benignIn.getNameK(criticalIn[1]), insn), sliceStitch=True, sliceInfo=benignIn)
+                        corruption_target = runAlgo1(benignIn.getTrace(criticalIn[1]), [(benignIn.getNameK(alignIn[0]), alignRst[0])], (benignIn.getNameK(criticalIn[1]), insn), sliceStitch=True, sliceInfo=benignIn, cache=cache)
                     else:
-                        corruption_target = runAlgo1(benignIn.getTrace(criticalIn[1]), [alignRst[0]], insn, sliceStitch=False, sliceInfo=benignIn)
+                        corruption_target = runAlgo1(benignIn.getTrace(criticalIn[1]), [alignRst[0]], insn, sliceStitch=False, sliceInfo=benignIn, cache=cache)
 
                     if not corruption_target:
                         print "single stitch candidates selection: {function_name} {call_no} {param_no}: faied to find".format(function_name=function_name, call_no=j, param_no=k)
