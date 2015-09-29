@@ -1,6 +1,6 @@
 /**
  * Prepare trace for input to the SMT solver
- * Input: <trace> <slice_insn>
+ * Input: <trace> <slice_insn> <output trace name>
  *
  */
 
@@ -47,13 +47,12 @@ bool isTainted(frame &cur_frame){
 
 int main(int argc, char **argv)
 {
-	if (argc != 3) {
+	if (argc < 3) {
 		if (argv[0]) {
-			std::cout << "Usage: " << argv[0] << " <trace> <slice_insn>" << std::endl;
+			std::cout << "Usage: " << argv[0] << " <trace> <slice_insn> <output trace name>" << std::endl;
 		}
 		exit(1);
 	}
-
 
 	std::ifstream infile(argv[2]);
 	std::string line;
@@ -73,8 +72,12 @@ int main(int argc, char **argv)
 		std::cout << ' ' << *it;
 	std::cout << '\n';
 
+	char *outputName = "test.bpt";
+	if (argc == 4)
+		outputName = argv[3];
+
 	TraceContainerReader tr(argv[1]);
-	TraceContainerWriter tw("test.bpt", tr.get_arch(), tr.get_machine(), tr.get_frames_per_toc_entry(), false);
+	TraceContainerWriter tw(outputName, tr.get_arch(), tr.get_machine(), tr.get_frames_per_toc_entry(), false);
 
 	uint64_t current_slice_insn_idx = 0;
 	while (!tr.end_of_trace())

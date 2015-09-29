@@ -2,7 +2,7 @@ import logging
 import subprocess
 from interimCache import interimCache
 import enhanceLogging
-
+import os
 class Lookahead:
     """Lookahead iterator for efficient parsing
 
@@ -30,11 +30,38 @@ class Lookahead:
                 return None
         return self.buffer[n]
 
+def getTempFileName(cmd):
+    cacheFolder = "tmp/"
+    invalidChars = '\/:*?"<>|'
+
+    item_final = []
+    for i in cmd.split():
+        i = i.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+        for c in invalidChars:
+            i = i.replace(c, "-")
+
+        item_final.append(i)
+
+    filename = "_".join(item_final) + ".tmp"
+    fullpath = cacheFolder + filename
+
+    if not os.path.exists(cacheFolder):
+        try:
+            os.makedirs(cacheFolder)
+        except OSError as error:
+            if error.errno != error.errno.EEXIST:
+                raise
+
+
+    logging.info("Cache file name generated {0}".format(fullpath))
+
+    return fullpath
+
 def execute(cmd, cache=False):
-    
-    #testing
-    cache=True
-    
+
+    # testing
+    cache = True
+
     if (cache):
         ic = interimCache(cmd)
         if ic.exist(): return ic.load()
@@ -43,7 +70,7 @@ def execute(cmd, cache=False):
 
     if (cache):
         ic.save(rst)
-        
+
     return rst
 
 def executeCommand(cmd):
@@ -53,8 +80,12 @@ def executeCommand(cmd):
 
     logger.debug("Executing command: " + cmd)
 
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, close_fds=True)
+    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
 
+    stderr = p.stderr
+    with stderr as err_result:
+        err_rst = err_result.read().strip()
+        logger.debugv("Result ERR:\n%s", err_rst)
     stdout = p.stdout
     with stdout as result:
         rst = result.read().strip()

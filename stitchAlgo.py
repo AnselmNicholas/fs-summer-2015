@@ -5,7 +5,7 @@ import os
 # import subprocess
 import slicer
 import enhanceLogging
-from misc import execute
+from misc import execute, getTempFileName
 
 def isRegister(name):
     if name[:2] == "R_":return True
@@ -107,6 +107,110 @@ def getVPP(trace, insn, bindir=os.path.dirname(os.path.realpath(__file__)) + "/b
         raise Exception("VPP not found: " + rst)
     return vppRst
 
+def exportSlicedInsn(graph, trace, insn):
+    """
+    Generates the list of instruction in the slice to trim trace for solving
+    Input:
+        trace - path to trace file
+        insn - instruction no of vp
+
+    Output:
+        path to the list of instructions in trace
+    """
+    logger = logging.getLogger(__name__)
+    outputFileName = getTempFileName("{} {} {}".format("sliceInsn", trace, insn))
+    logger.debug("Exported instruction in slice {} {}".format(trace, insn))
+
+    with open(outputFileName, "w") as f:
+        for V in graph.iternodes():
+            f.write("{}\n".format(V.name));
+
+    logger.debug("Exported insn in slice.")
+    return outputFileName
+
+def prepForSMT(trace, insn, sliceInsnList, bindir=os.path.dirname(os.path.realpath(__file__)) + "/bin/", cache=False):
+    """
+    Trim the trace for solving
+
+    Input:
+        trace - path to trace file
+        insn - instruction no of vp
+        sliceInsnList - path to list of insn
+
+    Output:
+        path to the new trace
+    """
+    logger = logging.getLogger(__name__)
+    logger.info("Preparing {} {} for formula generation".format(trace, insn))
+
+    outputFileName = getTempFileName("{} {} {}".format("prepSMT", trace, insn)) + ".bpt"
+
+    cmd = "{bindir}prepForSMT {trace} {sliceInsnList} {outputTrace}".format(bindir=bindir, trace=trace, sliceInsnList=sliceInsnList, outputTrace=outputFileName)
+
+    rst = execute(cmd, cache)
+
+    logger.info("Trace {} trimmed to {}.".format(trace, outputFileName))
+
+    return outputFileName
+
+def generateFormula(slicedTrace, solver="z3", cache=False):
+    """
+    Generate the formula using iltrans
+
+    Input:
+        slicedTrace - path to trace file
+
+    Output:
+        path to the formula
+    """
+
+    logger = logging.getLogger(__name__)
+    logger.info("Generating formula for {} with ourput format {}".format(slicedTrace, solver))
+    ext = ""
+    if solver == "z3":
+        ext = ".smt2"
+
+    outputFileName = getTempFileName("{} {} {}".format("genFormula", slicedTrace, solver)) + ext
+
+    cmd = "iltrans -trace {trace} -trace-solver {solver} -trace-formula {output}".format(trace=slicedTrace, solver=solver, output=outputFileName)
+
+    rst = execute(cmd, cache)
+
+    with open(outputFileName) as f:
+        contents = f.readlines()
+
+    contents.insert(len(contents) - 1, "(get-model)\n")
+
+    with open(outputFileName, "w") as f:
+        f.writelines(contents)
+
+    # logger.info("Trace {} trimmed to {}.".format(trace, outputFileName))
+
+    return outputFileName
+
+def solveFormula(formula, solver="z3", cache=False):
+    """
+    Solve and print witness if its solvable
+
+    Input:
+        formula - path to formula
+    """
+
+    logger = logging.getLogger(__name__)
+    logger.info("Solving {} using {}".format(formula, solver))
+    cmd = "{solver} {formula}".format(solver=solver, formula=formula)
+    rst = execute(cmd, cache)
+
+    rst = rst.splitlines()
+    print rst
+    if rst[0] == "sat":
+        logger.info("formula is sat")
+        return True
+    else:
+        logger.info("formula is unsat")
+        return False
+
+
 def getEdges(graph, src):
     logger = logging.getLogger(__name__)
     # src = vS
@@ -181,7 +285,10 @@ def runAlgo1(G, I, vT, sliceStitch=False, sliceInfo=None):
     else:
         i = I[0]
 
-
+    sliceInsnList = exportSlicedInsn(TDFlow, G, vTi)
+    slicedTrace = prepForSMT(G, vTi, sliceInsnList)
+    formula = generateFormula(slicedTrace)
+    solveFormula(formula)
 
     for V in getEdges(TDFlow, vTs):
         if sliceStitch:

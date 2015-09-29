@@ -19,21 +19,21 @@ class interimCache:
         self.filename = "_".join(item_final) + ".cache"
         self.fullpath = self.cacheFolder + self.filename
 
-        logging.info("Cache object created {0}".format(self.fullpath))
+        logger.info("Cache object created {0}".format(self.fullpath))
 
     def exist(self):
         return os.path.isfile(self.fullpath)
 
     def load(self):
         logger = logging.getLogger(__name__)
-        logging.info("Data loaded from cache {0}".format(self.fullpath))
+        logger.info("Data loaded from cache {0}".format(self.fullpath))
         with open(self.fullpath) as f:
             ret = f.read()
         return ret
 
     def save(self, data):
         logger = logging.getLogger(__name__)
-        logging.info("Data written to cache {0}".format(self.fullpath))
+        logger.info("Data written to cache {0}".format(self.fullpath))
 
         if not os.path.exists(self.cacheFolder):
             try:
