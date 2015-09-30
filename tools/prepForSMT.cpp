@@ -27,19 +27,17 @@ uint64_t ctr = 0;
 
 std::vector<uint64_t> slice_insn;
 
-bool isTainted(frame &cur_frame){
+bool isTainted(frame &cur_frame) {
 	const ::std_frame& cur_std_frame = cur_frame.std_frame();
 
 	if (cur_std_frame.has_operand_pre_list()) {
-		for(int i = 0; i < cur_std_frame.operand_pre_list().elem_size(); i++){
-			if (!cur_std_frame.operand_pre_list().elem(i).taint_info().has_no_taint())
-				return true;
+		for (int i = 0; i < cur_std_frame.operand_pre_list().elem_size(); i++) {
+			if (!cur_std_frame.operand_pre_list().elem(i).taint_info().has_no_taint() && (cur_std_frame.operand_pre_list().elem(i).operand_usage().read() || cur_std_frame.operand_pre_list().elem(i).operand_usage().base())) return true;
 		}
 	}
 	if (cur_std_frame.has_operand_post_list()) {
-		for(int i = 0; i < cur_std_frame.operand_post_list().elem_size(); i++){
-			if (!cur_std_frame.operand_post_list().elem(i).taint_info().has_no_taint())
-				return true;
+		for (int i = 0; i < cur_std_frame.operand_post_list().elem_size(); i++) {
+			if (!cur_std_frame.operand_post_list().elem(i).taint_info().has_no_taint() && (cur_std_frame.operand_pre_list().elem(i).operand_usage().read() || cur_std_frame.operand_pre_list().elem(i).operand_usage().base())) return true;
 		}
 	}
 	return false;
