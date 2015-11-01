@@ -104,7 +104,8 @@ def getVPP(trace, insn, bindir=os.path.dirname(os.path.realpath(__file__)) + "/b
 
     if vppRst[0] == "err":
         logger.error("VPP not found: " + rst)
-        raise Exception("VPP not found: " + rst)
+        #raise Exception("VPP not found: " + rst)
+        return -1
     return vppRst
 
 def exportSlicedInsn(graph, trace, insn):
@@ -287,10 +288,12 @@ def runAlgo1(G, I, vT, sliceStitch=False, sliceInfo=None, cache=False):
     else:
         i = I[0]
 
-    sliceInsnList = exportSlicedInsn(TDFlow, G, vTi)
-    slicedTrace = prepForSMT(G, vTi, sliceInsnList, cache=False)
-    formula = generateFormula(slicedTrace, cache=False)
-    solveFormula(formula)
+    #Disabled SMT solving
+
+    #sliceInsnList = exportSlicedInsn(TDFlow, G, vTi)
+    #slicedTrace = prepForSMT(G, vTi, sliceInsnList, cache=False)
+    #formula = generateFormula(slicedTrace, cache=False)
+    #solveFormula(formula)
 
     for V in getEdges(TDFlow, vTs):
         if sliceStitch:
@@ -439,6 +442,7 @@ def runAlgo2(Gt, I, vS, vsi, vT, vti, cp, Gs=None, sliceStitch=False, sliceInfo=
         if isVPUsedToWriteV(tdtrace, c): continue  # 10
 
         vpp = getVPP(tdtrace, c)  # sliceStitch shouldnt need to join
+        if vpp == -1: continue
         if vpp[0] in ["ESP", "EBP"]: continue  # Unable to determine vpp
 
         if sliceStitch:
@@ -522,8 +526,9 @@ def runAlgo2(Gt, I, vS, vsi, vT, vti, cp, Gs=None, sliceStitch=False, sliceInfo=
 
 
         if not isVPUsedToWriteV(sdtrace, c): continue  # 18
-
+        
         vpp = getVPP(tdtrace, c)
+        if vpp == -1: continue
         if vpp[0] in ["ESP", "EBP"]: continue  # Unable to determine vpp
 
         if sliceStitch:
